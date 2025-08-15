@@ -118,7 +118,7 @@ class CalendarImportViewModel: ObservableObject {
             name: ekEvent.title ?? "Unknown Event",
             date: ekEvent.startDate ?? Date(),
             forWhom: ekEvent.notes ?? "N/A",
-            categoryID: nil,
+            category: nil,
             notes: ekEvent.notes,
             // FIXED: Changed 'isYearly' to 'recurrence' to match the data model.
             recurrence: .oneTime

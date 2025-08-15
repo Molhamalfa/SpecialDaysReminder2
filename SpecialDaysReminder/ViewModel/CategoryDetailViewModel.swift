@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import CloudKit
 
 class CategoryDetailViewModel: ObservableObject {
     @Published var specialDaysForCategory: [SpecialDayModel] = []
@@ -19,31 +20,28 @@ class CategoryDetailViewModel: ObservableObject {
         self.category = category
         self.specialDaysListViewModel = specialDaysListViewModel
         
-        // Subscribe to changes in the main list of special days
         specialDaysListViewModel.$specialDays
             .sink { [weak self] _ in
                 self?.updateFilteredDays()
             }
             .store(in: &cancellables)
             
-        // Initial data load
         updateFilteredDays()
     }
 
     private func updateFilteredDays() {
         let allDays = specialDaysListViewModel.specialDays
         if let category = category {
-            // Filter by the specific category if one is provided
-            self.specialDaysForCategory = allDays.filter { $0.categoryID == category.id }
+            // Filtering is now based on the categoryReference's recordID.
+            self.specialDaysForCategory = allDays.filter { $0.categoryReference?.recordID == category.id }
         } else {
-            // Otherwise, show all special days
             self.specialDaysForCategory = allDays
         }
-        // Sort the results by the next occurrence date
         self.specialDaysForCategory.sort { $0.nextOccurrenceDate < $1.nextOccurrenceDate }
     }
 
-    func deleteDay(id: UUID) {
+    // The delete function now accepts a CKRecord.ID.
+    func deleteDay(id: CKRecord.ID) {
         specialDaysListViewModel.deleteSpecialDay(id: id)
     }
 }

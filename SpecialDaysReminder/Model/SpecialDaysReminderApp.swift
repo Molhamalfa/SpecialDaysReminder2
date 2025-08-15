@@ -9,18 +9,18 @@ import SwiftUI
 
 @main
 struct SpecialDaysReminderApp: App {
-    // REMOVED: deepLinkCategory state is no longer needed.
-    @State private var deepLinkEventID: UUID? = nil
+    // FIXED: The deepLinkEventID is now a String? to match the CKRecord.ID's recordName.
+    @State private var deepLinkEventID: String? = nil
     @State private var deepLinkAddEvent: Bool = false
 
     @StateObject private var calendarManager = CalendarManager()
 
     var body: some Scene {
         WindowGroup {
+            // Pass the binding of the corrected type.
             SpecialDaysListView(deepLinkEventID: $deepLinkEventID, deepLinkAddEvent: $deepLinkAddEvent)
                 .preferredColorScheme(.light)
                 .onOpenURL { url in
-                    // REMOVED: Logic for handling category deep links.
                     guard url.scheme == "specialdaysreminder" else {
                         return
                     }
@@ -31,9 +31,9 @@ struct SpecialDaysReminderApp: App {
                     if url.host == "event",
                        let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                        let queryItems = components.queryItems,
-                       let eventIDString = queryItems.first(where: { $0.name == "id" })?.value,
-                       let eventID = UUID(uuidString: eventIDString) {
-                        self.deepLinkEventID = eventID
+                       // FIXED: We now directly use the eventIDString without converting it to a UUID.
+                       let eventIDString = queryItems.first(where: { $0.name == "id" })?.value {
+                        self.deepLinkEventID = eventIDString
                     } else if url.host == "add" {
                         self.deepLinkAddEvent = true
                     }

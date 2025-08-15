@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CloudKit
 
 struct EditSpecialDayView: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
@@ -15,8 +16,8 @@ struct EditSpecialDayView: View {
     @State private var reminderTimes: [Date]
     
     private var themeColor: Color {
-        if let categoryID = specialDay.categoryID,
-           let category = viewModel.categories.first(where: { $0.id == categoryID }) {
+        // Updated to use the new category(for:) helper method.
+        if let category = viewModel.category(for: specialDay) {
             return category.color
         }
         return .gray
@@ -68,6 +69,20 @@ private struct EventDetailsSection: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
     let themeColor: Color
     
+    // A binding to specifically manage the category reference's record ID.
+    private var categoryRecordID: Binding<CKRecord.ID?> {
+        Binding(
+            get: { self.specialDay.categoryReference?.recordID },
+            set: { newID in
+                if let newID = newID {
+                    self.specialDay.categoryReference = CKRecord.Reference(recordID: newID, action: .none)
+                } else {
+                    self.specialDay.categoryReference = nil
+                }
+            }
+        )
+    }
+    
     var body: some View {
         Section(header: Text("Event Details")) {
             TextField("Event Name", text: $specialDay.name)
@@ -78,14 +93,15 @@ private struct EventDetailsSection: View {
 
             TextField("For Whom", text: $specialDay.forWhom)
             
-            Picker("Category", selection: $specialDay.categoryID) {
-                Text("Uncategorized").tag(nil as UUID?)
+            // Picker now binds to our custom categoryRecordID binding.
+            Picker("Category", selection: categoryRecordID) {
+                Text("Uncategorized").tag(nil as CKRecord.ID?)
                 ForEach(viewModel.categories) { cat in
                     HStack {
                         Text(cat.icon)
                         Text(cat.displayName)
                     }
-                    .tag(cat.id as UUID?)
+                    .tag(cat.id as CKRecord.ID?)
                 }
             }
             .pickerStyle(.menu)
@@ -102,14 +118,13 @@ private struct EventDetailsSection: View {
     }
 }
 
+// ReminderSettingsSection remains unchanged.
 private struct ReminderSettingsSection: View {
     @Binding var specialDay: SpecialDayModel
     @Binding var reminderTimes: [Date]
     let themeColor: Color
     
-    // This computed property defines the valid time range for the reminder picker.
     private var reminderTimeRange: PartialRangeThrough<Date> {
-        // The user can select any time up to and including the event's specific time.
         return ...specialDay.date
     }
     
@@ -123,7 +138,6 @@ private struct ReminderSettingsSection: View {
                 .tint(themeColor)
             
             if specialDay.reminderEnabled {
-                // RESTORED: The full set of reminder options.
                 Picker("Start Reminders", selection: $specialDay.reminderDaysBefore) {
                     ForEach(1...7, id: \.self) { day in
                         Text("\(day) day\(day > 1 ? "s" : "") before").tag(day)
@@ -145,7 +159,6 @@ private struct ReminderSettingsSection: View {
                 }
                 
                 ForEach(reminderTimes.indices, id: \.self) { index in
-                    // UPDATED: This picker is now constrained for non-all-day events.
                     if !specialDay.isAllDay {
                         DatePicker("Time \(index + 1)", selection: $reminderTimes[index], in: reminderTimeRange, displayedComponents: .hourAndMinute)
                     } else {

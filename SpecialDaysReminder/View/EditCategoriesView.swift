@@ -48,7 +48,7 @@ struct EditCategoriesView: View {
                         ColorPicker("Color", selection: $category.color, supportsOpacity: false)
                     }
                     .onDelete(perform: { indexSet in
-                        viewModel.categories.remove(atOffsets: indexSet)
+                        viewModel.deleteCategory(at: indexSet)
                     })
                 }
             }

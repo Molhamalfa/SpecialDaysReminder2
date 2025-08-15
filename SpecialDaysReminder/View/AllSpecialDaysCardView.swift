@@ -17,6 +17,7 @@ struct AllSpecialDaysCardView: View {
 
     var body: some View {
         NavigationLink(value: NavigationDestinationType.allSpecialDaysDetail) {
+            // This logic for creating a display-only category remains valid.
             let displayCategory = SpecialDayCategory(name: "All Special Days", color: viewModel.allDaysCategoryColor, icon: "🗓️")
             
             CategoryCardView(
@@ -26,7 +27,8 @@ struct AllSpecialDaysCardView: View {
                     onAddTapped()
                 },
                 onDayTapped: { day in
-                    navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableUUID(id: day.id)))
+                    // FIXED: Replaced the old IdentifiableUUID with the new IdentifiableCKRecordID.
+                    navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id)))
                 },
                 customTitle: "All Special Days",
                 customIcon: "🗓️"

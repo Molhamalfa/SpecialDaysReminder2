@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CloudKit
 
 struct AddSpecialDayView: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
@@ -16,7 +17,8 @@ struct AddSpecialDayView: View {
     @State private var name: String = ""
     @State private var date: Date = Date()
     @State private var forWhom: String = ""
-    @State private var categoryID: UUID?
+    // The category ID is now a CKRecord.ID.
+    @State private var categoryID: CKRecord.ID?
     @State private var notes: String = ""
     @State private var recurrence: RecurrenceType = .yearly
     @State private var isAllDay: Bool = true
@@ -29,6 +31,7 @@ struct AddSpecialDayView: View {
     init(viewModel: SpecialDaysListViewModel, initialCategory: SpecialDayCategory?) {
         _viewModel = ObservedObject(wrappedValue: viewModel)
         self.initialCategory = initialCategory
+        // Set the initial category ID from the new model.
         _categoryID = State(initialValue: initialCategory?.id)
     }
 
@@ -60,8 +63,8 @@ struct AddSpecialDayView: View {
                     reminderDaysBefore: $reminderDaysBefore,
                     reminderFrequency: $reminderFrequency,
                     reminderTimes: $reminderTimes,
-                    eventDate: $date, // Pass the event date
-                    isAllDay: $isAllDay // Pass the all-day status
+                    eventDate: $date,
+                    isAllDay: $isAllDay
                 )
             }
             .navigationTitle("Add Special Day")
@@ -72,11 +75,15 @@ struct AddSpecialDayView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
+                        // Find the selected category from the view model.
+                        let selectedCategory = viewModel.categories.first { $0.id == categoryID }
+                        
+                        // Create the new SpecialDayModel using the CloudKit-ready initializer.
                         let newDay = SpecialDayModel(
                             name: name,
                             date: date,
                             forWhom: forWhom,
-                            categoryID: categoryID,
+                            category: selectedCategory, // Pass the whole category object.
                             notes: notes.isEmpty ? nil : notes,
                             recurrence: recurrence,
                             isAllDay: isAllDay,
@@ -101,7 +108,7 @@ private struct AddEventDetailsSection: View {
     @Binding var name: String
     @Binding var date: Date
     @Binding var forWhom: String
-    @Binding var categoryID: UUID?
+    @Binding var categoryID: CKRecord.ID?
     @Binding var notes: String
     @Binding var recurrence: RecurrenceType
     @Binding var isAllDay: Bool
@@ -114,13 +121,14 @@ private struct AddEventDetailsSection: View {
             Toggle("All-Day Event", isOn: $isAllDay.animation())
             TextField("For Whom", text: $forWhom)
             Picker("Category", selection: $categoryID) {
-                Text("Uncategorized").tag(nil as UUID?)
+                Text("Uncategorized").tag(nil as CKRecord.ID?)
+                // The picker now iterates over the new category models.
                 ForEach(viewModel.categories) { cat in
                     HStack {
                         Text(cat.icon)
                         Text(cat.displayName)
                     }
-                    .tag(cat.id as UUID?)
+                    .tag(cat.id as CKRecord.ID?)
                 }
             }
             .pickerStyle(.menu)
@@ -135,6 +143,7 @@ private struct AddEventDetailsSection: View {
     }
 }
 
+// AddReminderSettingsSection remains unchanged.
 private struct AddReminderSettingsSection: View {
     @Binding var reminderEnabled: Bool
     @Binding var reminderDaysBefore: Int

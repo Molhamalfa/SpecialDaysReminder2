@@ -28,7 +28,8 @@ struct CategoryGridSectionView: View {
                             onAddTapped(category)
                         },
                         onDayTapped: { day in
-                            navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableUUID(id: day.id)))
+                            // FIXED: Replaced the old IdentifiableUUID with the new IdentifiableCKRecordID.
+                            navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id)))
                         }
                     )
                 }

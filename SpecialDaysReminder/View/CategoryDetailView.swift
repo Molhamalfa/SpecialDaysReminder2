@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CloudKit
 
 struct CategoryDetailView: View {
     @StateObject private var categoryDetailViewModel: CategoryDetailViewModel
@@ -15,7 +16,7 @@ struct CategoryDetailView: View {
     @Binding var navigationPath: NavigationPath
     
     @State private var showingAddSpecialDaySheet = false
-    @Environment(\.dismiss) var dismiss // To handle the custom back button action
+    @Environment(\.dismiss) var dismiss
 
     init(viewModel: SpecialDaysListViewModel, category: SpecialDayCategory?, navigationPath: Binding<NavigationPath>) {
         _specialDaysListViewModel = ObservedObject(wrappedValue: viewModel)
@@ -24,7 +25,6 @@ struct CategoryDetailView: View {
         _categoryDetailViewModel = StateObject(wrappedValue: CategoryDetailViewModel(category: category, specialDaysListViewModel: viewModel))
     }
 
-    // A computed property to get a darker version of the theme color
     private var darkerThemeColor: Color {
         (category?.color ?? .purple).darker()
     }
@@ -36,13 +36,15 @@ struct CategoryDetailView: View {
 
             List {
                 ForEach(categoryDetailViewModel.specialDaysForCategory) { day in
-                    NavigationLink(value: NavigationDestinationType.editSpecialDay(IdentifiableUUID(id: day.id))) {
+                    // Navigation now uses the IdentifiableCKRecordID wrapper.
+                    NavigationLink(value: NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id))) {
                         SpecialDayRowView(day: day, themeColor: category?.color ?? .purple)
                     }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .swipeActions {
                         Button(role: .destructive) {
+                            // Deletion now passes the CKRecord.ID.
                             categoryDetailViewModel.deleteDay(id: day.id)
                         } label: {
                             Label("Delete", systemImage: "trash.fill")
@@ -52,22 +54,20 @@ struct CategoryDetailView: View {
             }
             .listStyle(.plain)
             .navigationTitle(category?.displayName ?? "All Special Days")
-            .navigationBarBackButtonHidden(true) // Hide the default back button
+            .navigationBarBackButtonHidden(true)
             .toolbar {
-                // Custom back button
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "chevron.left.circle.fill")
                             .font(.title2)
-                            .foregroundColor(darkerThemeColor) // Apply darker color
+                            .foregroundColor(darkerThemeColor)
                     }
                 }
-                // Custom add button
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { showingAddSpecialDaySheet = true } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
-                            .foregroundColor(darkerThemeColor) // Apply darker color
+                            .foregroundColor(darkerThemeColor)
                     }
                 }
             }
@@ -78,8 +78,7 @@ struct CategoryDetailView: View {
     }
 }
 
-// MARK: - Color Extension
-// Helper extension to easily create a darker shade of any color.
+// Color extension remains unchanged.
 extension Color {
     func darker(by percentage: CGFloat = 0.2) -> Color {
         let uiColor = UIColor(self)
