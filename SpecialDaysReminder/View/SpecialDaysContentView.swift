@@ -10,9 +10,7 @@ import SwiftUI
 struct SpecialDaysContentView: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
 
-    // Animation states
-    let headerOpacity: Double
-    let headerOffset: CGFloat
+    // REMOVED: The animation states for the old header are no longer needed.
     let allDaysCardOpacity: Double
     let allDaysCardOffset: CGFloat
     let categoryGridOpacity: Double
@@ -25,43 +23,38 @@ struct SpecialDaysContentView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // UPDATED: The root view is now a VStack
-            VStack(spacing: 20) {
-                // The header is now outside the ScrollView, so it will stay fixed at the top.
-                SpecialDaysHeaderView()
-                    .opacity(headerOpacity)
-                    .offset(y: headerOffset)
-                    .padding(.top, 20)
+            // The root view is a ScrollView.
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 20) {
+                    // REMOVED: The SpecialDaysHeaderView has been deleted from this VStack.
+                    
+                    AllSpecialDaysCardView(
+                        viewModel: viewModel,
+                        allDaysCardOpacity: allDaysCardOpacity,
+                        allDaysCardOffset: allDaysCardOffset,
+                        navigationPath: $navigationPath,
+                        onAddTapped: {
+                            onAddTapped(nil)
+                        }
+                    )
 
-                // This ScrollView now only contains the list of cards.
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 20) {
-                        AllSpecialDaysCardView(
-                            viewModel: viewModel,
-                            allDaysCardOpacity: allDaysCardOpacity,
-                            allDaysCardOffset: allDaysCardOffset,
-                            navigationPath: $navigationPath,
-                            onAddTapped: {
-                                onAddTapped(nil)
-                            }
-                        )
-
-                        CategoryGridSectionView(
-                            viewModel: viewModel,
-                            categoryGridOpacity: categoryGridOpacity,
-                            categoryGridOffset: categoryGridOffset,
-                            onAddTapped: { category in
-                                onAddTapped(category)
-                            },
-                            navigationPath: $navigationPath
-                        )
-                    }
-                    // Padding to ensure the last card isn't hidden by the floating button
-                    .padding(.bottom, 100)
+                    CategoryGridSectionView(
+                        viewModel: viewModel,
+                        categoryGridOpacity: categoryGridOpacity,
+                        categoryGridOffset: categoryGridOffset,
+                        onAddTapped: { category in
+                            onAddTapped(category)
+                        },
+                        navigationPath: $navigationPath
+                    )
                 }
+                // Added top padding to give space below the new navigation bar title.
+                .padding(.top, 20)
+                // Padding to ensure the last card isn't hidden by the floating button.
+                .padding(.bottom, 100)
             }
 
-            // The button remains in the ZStack, fixed at the bottom
+            // The button remains in the ZStack, fixed at the bottom.
             AddButtonView {
                 showingAddCategorySheet = true
             }

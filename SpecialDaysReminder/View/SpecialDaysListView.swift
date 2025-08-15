@@ -33,9 +33,7 @@ struct SpecialDaysListView: View {
     @Binding var deepLinkEventID: String?
     @Binding var deepLinkAddEvent: Bool
 
-    // Animation states remain the same.
-    @State private var headerOpacity: Double = 0
-    @State private var headerOffset: CGFloat = -20
+    // REMOVED: Header animation states are no longer needed as the title is now in the navigation bar.
     @State private var allDaysCardOpacity: Double = 0
     @State private var allDaysCardOffset: CGFloat = -20
     @State private var categoryGridOpacity: Double = 0
@@ -58,10 +56,9 @@ struct SpecialDaysListView: View {
                 
                 case .loaded:
                     // The content view is only shown when data is successfully loaded.
+                    // NOTE: You will need to remove the headerOpacity and headerOffset parameters from your SpecialDaysContentView.swift file.
                     SpecialDaysContentView(
                         viewModel: viewModel,
-                        headerOpacity: headerOpacity,
-                        headerOffset: headerOffset,
                         allDaysCardOpacity: allDaysCardOpacity,
                         allDaysCardOffset: allDaysCardOffset,
                         categoryGridOpacity: categoryGridOpacity,
@@ -96,20 +93,29 @@ struct SpecialDaysListView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Toolbar is only shown when data is loaded.
                 if case .loaded = viewModel.cloudKitState {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        NavigationLink(value: NavigationDestinationType.editCategories) {
-                            Image(systemName: "pencil.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.black)
-                        }
+                    // FIXED: Added a ToolbarItem for the title to place it in the navigation bar.
+                    ToolbarItem(placement: .principal) {
+                        Text("Your Special Days")
+                            .font(.headline)
+                            .fontWeight(.bold)
                     }
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button {
-                            navigationPath.append(NavigationDestinationType.calendarImport)
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Menu {
+                            Button {
+                                navigationPath.append(NavigationDestinationType.editCategories)
+                            } label: {
+                                Label("Edit Categories", systemImage: "pencil")
+                            }
+                            
+                            Button {
+                                navigationPath.append(NavigationDestinationType.calendarImport)
+                            } label: {
+                                Label("Import from Calendar", systemImage: "square.and.arrow.down")
+                            }
                         } label: {
-                            Image(systemName: "square.and.arrow.down.fill")
+                            Image(systemName: "ellipsis.circle")
                                 .font(.title2)
                                 .foregroundColor(.black)
                         }
@@ -145,17 +151,17 @@ struct SpecialDaysListView: View {
         .onAppear {
             // Animations now trigger when the state becomes .loaded.
             if case .loaded = viewModel.cloudKitState {
-                withAnimation(.easeOut(duration: 0.5).delay(0.1)) { headerOpacity = 1; headerOffset = 0 }
-                withAnimation(.easeOut(duration: 0.5).delay(0.2)) { allDaysCardOpacity = 1; allDaysCardOffset = 0 }
-                withAnimation(.easeOut(duration: 0.5).delay(0.3)) { categoryGridOpacity = 1; categoryGridOffset = 0 }
+                // REMOVED: Animation for the old header view.
+                withAnimation(.easeOut(duration: 0.5).delay(0.1)) { allDaysCardOpacity = 1; allDaysCardOffset = 0 }
+                withAnimation(.easeOut(duration: 0.5).delay(0.2)) { categoryGridOpacity = 1; categoryGridOffset = 0 }
             }
         }
         .onChange(of: viewModel.cloudKitState) { _, newState in
              // Trigger animation when data is loaded.
             if case .loaded = newState {
-                withAnimation(.easeOut(duration: 0.5).delay(0.1)) { headerOpacity = 1; headerOffset = 0 }
-                withAnimation(.easeOut(duration: 0.5).delay(0.2)) { allDaysCardOpacity = 1; allDaysCardOffset = 0 }
-                withAnimation(.easeOut(duration: 0.5).delay(0.3)) { categoryGridOpacity = 1; categoryGridOffset = 0 }
+                // REMOVED: Animation for the old header view.
+                withAnimation(.easeOut(duration: 0.5).delay(0.1)) { allDaysCardOpacity = 1; allDaysCardOffset = 0 }
+                withAnimation(.easeOut(duration: 0.5).delay(0.2)) { categoryGridOpacity = 1; categoryGridOffset = 0 }
             }
         }
         .onChange(of: deepLinkEventID) { _, newEventIDString in
