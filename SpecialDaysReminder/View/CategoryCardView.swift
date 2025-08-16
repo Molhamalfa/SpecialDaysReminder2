@@ -12,14 +12,12 @@ struct CategoryCardView: View {
     let specialDays: [SpecialDayModel]
     
     let onAddTapped: () -> Void
-    // The share action is now optional. The button will only appear if this is provided.
     let onShareTapped: (() -> Void)?
     let onDayTapped: (SpecialDayModel) -> Void
 
     var customTitle: String?
     var customIcon: String?
-
-    // A new initializer that makes onShareTapped optional.
+    
     init(category: SpecialDayCategory, specialDays: [SpecialDayModel], onAddTapped: @escaping () -> Void, onShareTapped: (() -> Void)? = nil, onDayTapped: @escaping (SpecialDayModel) -> Void, customTitle: String? = nil, customIcon: String? = nil) {
         self.category = category
         self.specialDays = specialDays
@@ -41,10 +39,17 @@ struct CategoryCardView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
 
+                // NEW: If the category is shared, show an indicator icon.
+                if category.isShared {
+                    Image(systemName: "person.2.fill")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                }
+
                 Spacer()
                 
-                // The share button is now conditional.
-                if let onShareTapped = onShareTapped {
+                // Don't show the share button on an already shared category.
+                if let onShareTapped = onShareTapped, !category.isShared {
                     Button(action: onShareTapped) {
                         Image(systemName: "square.and.arrow.up.circle.fill")
                             .font(.title2)

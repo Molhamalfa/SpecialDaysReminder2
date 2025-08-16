@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import CloudKit
 
+// Enums and Extensions remain the same.
 public enum RecurrenceType: String, CaseIterable {
     case oneTime = "One Time"
     case weekly = "Weekly"
@@ -94,6 +95,7 @@ public struct SpecialDayCategory: Identifiable, Hashable {
     }
 }
 
+// SpecialDayModel remains unchanged.
 public struct SpecialDayModel: Identifiable {
     private(set) var record: CKRecord
     
