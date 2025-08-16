@@ -9,7 +9,6 @@ import Foundation
 import SwiftUI
 import CloudKit
 
-// Enums and Extensions remain the same.
 public enum RecurrenceType: String, CaseIterable {
     case oneTime = "One Time"
     case weekly = "Weekly"
@@ -72,13 +71,9 @@ public struct SpecialDayCategory: Identifiable, Hashable {
         return name
     }
 
-    // FIXED: Reordered initialization to set all stored properties before using 'self'.
     init(name: String, color: Color, icon: String) {
-        // 1. Initialize all stored properties first.
         self.record = CKRecord(recordType: "Category")
         self.isShared = false
-
-        // 2. Now it's safe to use computed properties which rely on 'self'.
         self.name = name
         self.color = color
         self.icon = icon
@@ -99,7 +94,6 @@ public struct SpecialDayCategory: Identifiable, Hashable {
     }
 }
 
-// SpecialDayModel remains unchanged.
 public struct SpecialDayModel: Identifiable {
     private(set) var record: CKRecord
     
