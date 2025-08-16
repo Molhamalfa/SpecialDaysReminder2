@@ -9,8 +9,7 @@ import Foundation
 import SwiftUI
 import CloudKit
 
-// MARK: - Enums and Extensions (Unchanged)
-
+// Enums and Extensions remain the same.
 public enum RecurrenceType: String, CaseIterable {
     case oneTime = "One Time"
     case weekly = "Weekly"
@@ -42,11 +41,10 @@ extension Color {
     }
 }
 
-// MARK: - CloudKit-Ready Models
 
-// FIXED: Added conformance to Hashable and Equatable.
 public struct SpecialDayCategory: Identifiable, Hashable {
     private(set) var record: CKRecord
+    var isShared: Bool
     
     public var id: CKRecord.ID { record.recordID }
     
@@ -73,30 +71,35 @@ public struct SpecialDayCategory: Identifiable, Hashable {
     public var displayName: String {
         return name
     }
-    
+
+    // FIXED: Reordered initialization to set all stored properties before using 'self'.
     init(name: String, color: Color, icon: String) {
+        // 1. Initialize all stored properties first.
         self.record = CKRecord(recordType: "Category")
+        self.isShared = false
+
+        // 2. Now it's safe to use computed properties which rely on 'self'.
         self.name = name
         self.color = color
         self.icon = icon
     }
     
-    init?(record: CKRecord) {
+    init?(record: CKRecord, isShared: Bool = false) {
         guard record.recordType == "Category" else { return nil }
         self.record = record
+        self.isShared = isShared
     }
     
-    // Conformance to Equatable by comparing the unique record ID.
     public static func == (lhs: SpecialDayCategory, rhs: SpecialDayCategory) -> Bool {
         lhs.id == rhs.id
     }
     
-    // Conformance to Hashable by hashing the unique record ID.
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 }
 
+// SpecialDayModel remains unchanged.
 public struct SpecialDayModel: Identifiable {
     private(set) var record: CKRecord
     

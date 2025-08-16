@@ -9,7 +9,6 @@ import SwiftUI
 
 @main
 struct SpecialDaysReminderApp: App {
-    // FIXED: The deepLinkEventID is now a String? to match the CKRecord.ID's recordName.
     @State private var deepLinkEventID: String? = nil
     @State private var deepLinkAddEvent: Bool = false
 
@@ -17,7 +16,8 @@ struct SpecialDaysReminderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // Pass the binding of the corrected type.
+            // FIXED: Reverted to the direct initialization of SpecialDaysListView.
+            // This removes the container view and the extra 'viewModel' argument that was causing the error.
             SpecialDaysListView(deepLinkEventID: $deepLinkEventID, deepLinkAddEvent: $deepLinkAddEvent)
                 .preferredColorScheme(.light)
                 .onOpenURL { url in
@@ -31,7 +31,6 @@ struct SpecialDaysReminderApp: App {
                     if url.host == "event",
                        let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                        let queryItems = components.queryItems,
-                       // FIXED: We now directly use the eventIDString without converting it to a UUID.
                        let eventIDString = queryItems.first(where: { $0.name == "id" })?.value {
                         self.deepLinkEventID = eventIDString
                     } else if url.host == "add" {

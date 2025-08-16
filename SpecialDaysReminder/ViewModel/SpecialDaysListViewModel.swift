@@ -50,7 +50,8 @@ class SpecialDaysListViewModel: ObservableObject {
     @Published var cloudKitState: CloudKitState = .idle
     @Published var isSignedInToiCloud: Bool = false
     
-    // NEW: Properties to manage the presentation of the sharing sheet.
+    // Properties to manage the presentation of the sharing sheet and loading state.
+    @Published var isPreparingShare = false
     @Published var shareToShow: CKShare?
     @Published var categoryToShare: SpecialDayCategory?
     @Published var isShowingSharingView = false
@@ -112,7 +113,7 @@ class SpecialDaysListViewModel: ObservableObject {
                 let categoryQuery = CKQuery(recordType: CloudKitRecordType.category.rawValue, predicate: NSPredicate(value: true))
                 let (categoryMatchResults, _) = try await CloudKitManager.shared.privateDatabase.records(matching: categoryQuery)
                 let categoryRecords = try categoryMatchResults.map { try $0.1.get() }
-                let fetchedCategories = categoryRecords.compactMap(SpecialDayCategory.init)
+                let fetchedCategories = categoryRecords.compactMap { SpecialDayCategory(record: $0) }
                 
                 let specialDayQuery = CKQuery(recordType: CloudKitRecordType.specialDay.rawValue, predicate: NSPredicate(value: true))
                 let (specialDayMatchResults, _) = try await CloudKitManager.shared.privateDatabase.records(matching: specialDayQuery)
@@ -251,18 +252,25 @@ class SpecialDaysListViewModel: ObservableObject {
         }
     }
     
-    // NEW: Function to initiate the sharing process.
     func shareCategory(_ category: SpecialDayCategory) {
         Task {
+            await MainActor.run {
+                self.isPreparingShare = true
+            }
+            
             do {
                 let share = try await CloudKitManager.shared.fetchOrCreateShare(for: category)
                 await MainActor.run {
+                    self.isPreparingShare = false
                     self.categoryToShare = category
                     self.shareToShow = share
                     self.isShowingSharingView = true
                 }
             } catch {
                 print("Failed to fetch or create share: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.isPreparingShare = false
+                }
             }
         }
     }

@@ -12,12 +12,23 @@ struct CategoryCardView: View {
     let specialDays: [SpecialDayModel]
     
     let onAddTapped: () -> Void
-    // NEW: A closure to handle the share button tap.
-    let onShareTapped: () -> Void
+    // The share action is now optional. The button will only appear if this is provided.
+    let onShareTapped: (() -> Void)?
     let onDayTapped: (SpecialDayModel) -> Void
 
     var customTitle: String?
     var customIcon: String?
+
+    // A new initializer that makes onShareTapped optional.
+    init(category: SpecialDayCategory, specialDays: [SpecialDayModel], onAddTapped: @escaping () -> Void, onShareTapped: (() -> Void)? = nil, onDayTapped: @escaping (SpecialDayModel) -> Void, customTitle: String? = nil, customIcon: String? = nil) {
+        self.category = category
+        self.specialDays = specialDays
+        self.onAddTapped = onAddTapped
+        self.onShareTapped = onShareTapped
+        self.onDayTapped = onDayTapped
+        self.customTitle = customTitle
+        self.customIcon = customIcon
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -32,14 +43,16 @@ struct CategoryCardView: View {
 
                 Spacer()
                 
-                // NEW: Added a share button next to the add button.
-                Button(action: onShareTapped) {
-                    Image(systemName: "square.and.arrow.up.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.white)
-                        .padding(5)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(Circle())
+                // The share button is now conditional.
+                if let onShareTapped = onShareTapped {
+                    Button(action: onShareTapped) {
+                        Image(systemName: "square.and.arrow.up.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding(5)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(Circle())
+                    }
                 }
                 
                 Button(action: onAddTapped) {

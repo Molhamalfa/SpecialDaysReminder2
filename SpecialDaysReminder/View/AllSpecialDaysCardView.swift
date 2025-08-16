@@ -19,16 +19,13 @@ struct AllSpecialDaysCardView: View {
         NavigationLink(value: NavigationDestinationType.allSpecialDaysDetail) {
             let displayCategory = SpecialDayCategory(name: "All Special Days", color: viewModel.allDaysCategoryColor, icon: "🗓️")
             
+            // FIXED: The onShareTapped parameter has been removed from this call.
+            // This fixes the compiler error and hides the share button for this card.
             CategoryCardView(
                 category: displayCategory,
                 specialDays: viewModel.specialDays,
                 onAddTapped: {
                     onAddTapped()
-                },
-                // FIXED: Added the onShareTapped parameter with an empty action,
-                // as the "All Special Days" card cannot be shared.
-                onShareTapped: {
-                    // This card is not shareable, so the action is empty.
                 },
                 onDayTapped: { day in
                     navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id)))

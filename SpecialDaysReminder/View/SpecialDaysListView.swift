@@ -45,47 +45,23 @@ struct SpecialDaysListView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                Color.white.edgesIgnoringSafeArea(.all)
-
-                switch viewModel.cloudKitState {
-                case .loading, .idle:
-                    ProgressView("Loading Your Special Days...")
+                contentView // The main content is now in a separate computed property.
                 
-                case .loaded:
-                    SpecialDaysContentView(
-                        viewModel: viewModel,
-                        allDaysCardOpacity: allDaysCardOpacity,
-                        allDaysCardOffset: allDaysCardOffset,
-                        categoryGridOpacity: categoryGridOpacity,
-                        categoryGridOffset: categoryGridOffset,
-                        showingAddCategorySheet: $showingAddCategorySheet,
-                        navigationPath: $navigationPath,
-                        onAddTapped: { category in
-                            self.selectedCategoryForAdd = category
-                            self.showingAddSpecialDaySheet = true
-                        },
-                        // Connect the share button tap to the view model's new function.
-                        onShareTapped: { category in
-                            viewModel.shareCategory(category)
-                        }
-                    )
-                
-                case .error(let error):
-                    VStack(spacing: 15) {
-                        Image(systemName: "exclamationmark.icloud.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.red)
-                        Text("Error Loading Data")
-                            .font(.headline)
-                        Text(error.localizedDescription)
-                            .font(.subheadline)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                        Button("Retry") {
-                            viewModel.fetchCategoriesAndSpecialDays()
-                        }
-                        .buttonStyle(.borderedProminent)
+                // An overlay to show the loading indicator when preparing a share.
+                if viewModel.isPreparingShare {
+                    Color.black.opacity(0.4)
+                        .edgesIgnoringSafeArea(.all)
+                    
+                    VStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        Text("Sharing Category...")
+                            .foregroundColor(.white)
+                            .padding(.top, 8)
                     }
+                    .padding(30)
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(15)
                 }
             }
             .navigationTitle("")
@@ -125,7 +101,7 @@ struct SpecialDaysListView: View {
             .sheet(isPresented: $showingAddSpecialDaySheet) {
                 AddSpecialDayView(viewModel: viewModel, initialCategory: selectedCategoryForAdd)
             }
-            // NEW: Add a sheet modifier to present the sharing view.
+            // Add a sheet modifier to present the sharing view.
             .sheet(isPresented: $viewModel.isShowingSharingView) {
                 if let share = viewModel.shareToShow, let category = viewModel.categoryToShare {
                     CloudKitSharingView(share: share, container: CloudKitManager.shared.container, categoryToShare: category) {
@@ -182,6 +158,54 @@ struct SpecialDaysListView: View {
                 self.selectedCategoryForAdd = nil
                 self.showingAddSpecialDaySheet = true
                 deepLinkAddEvent = false
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var contentView: some View {
+        ZStack {
+            Color.white.edgesIgnoringSafeArea(.all)
+
+            switch viewModel.cloudKitState {
+            case .loading, .idle:
+                ProgressView("Loading Your Special Days...")
+            
+            case .loaded:
+                SpecialDaysContentView(
+                    viewModel: viewModel,
+                    allDaysCardOpacity: allDaysCardOpacity,
+                    allDaysCardOffset: allDaysCardOffset,
+                    categoryGridOpacity: categoryGridOpacity,
+                    categoryGridOffset: categoryGridOffset,
+                    showingAddCategorySheet: $showingAddCategorySheet,
+                    navigationPath: $navigationPath,
+                    onAddTapped: { category in
+                        self.selectedCategoryForAdd = category
+                        self.showingAddSpecialDaySheet = true
+                    },
+                    // Connect the share button tap to the view model's new function.
+                    onShareTapped: { category in
+                        viewModel.shareCategory(category)
+                    }
+                )
+            
+            case .error(let error):
+                VStack(spacing: 15) {
+                    Image(systemName: "exclamationmark.icloud.fill")
+                        .font(.largeTitle)
+                        .foregroundColor(.red)
+                    Text("Error Loading Data")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    Button("Retry") {
+                        viewModel.fetchCategoriesAndSpecialDays()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
         }
     }
