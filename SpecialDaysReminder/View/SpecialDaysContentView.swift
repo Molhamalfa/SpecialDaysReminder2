@@ -20,6 +20,8 @@ struct SpecialDaysContentView: View {
     @Binding var showingAddCategorySheet: Bool
     @Binding var navigationPath: NavigationPath
     let onAddTapped: (SpecialDayCategory?) -> Void
+    // NEW: A closure to handle the share button tap from the grid.
+    let onShareTapped: (SpecialDayCategory) -> Void
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -44,6 +46,10 @@ struct SpecialDaysContentView: View {
                         categoryGridOffset: categoryGridOffset,
                         onAddTapped: { category in
                             onAddTapped(category)
+                        },
+                        // FIXED: Added the missing onShareTapped parameter.
+                        onShareTapped: { category in
+                            onShareTapped(category)
                         },
                         navigationPath: $navigationPath
                     )

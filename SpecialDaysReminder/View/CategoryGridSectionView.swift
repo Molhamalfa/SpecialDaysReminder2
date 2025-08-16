@@ -14,6 +14,8 @@ struct CategoryGridSectionView: View {
     
     // This closure is passed from the parent to handle the tap action
     let onAddTapped: (SpecialDayCategory) -> Void
+    // NEW: A closure to handle the share button tap for a specific category.
+    let onShareTapped: (SpecialDayCategory) -> Void
     @Binding var navigationPath: NavigationPath
 
     var body: some View {
@@ -27,8 +29,12 @@ struct CategoryGridSectionView: View {
                         onAddTapped: {
                             onAddTapped(category)
                         },
+                        // FIXED: Added the onShareTapped parameter.
+                        // This will call the closure passed from the parent view.
+                        onShareTapped: {
+                            onShareTapped(category)
+                        },
                         onDayTapped: { day in
-                            // FIXED: Replaced the old IdentifiableUUID with the new IdentifiableCKRecordID.
                             navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id)))
                         }
                     )

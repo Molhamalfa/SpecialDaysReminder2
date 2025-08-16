@@ -20,8 +20,6 @@ enum CloudKitState {
 }
 
 // MARK: - Widget-Specific Models
-// FIXED: These models are now defined here, making them accessible to the ViewModel.
-// The main app needs to know about these to save data for the widget.
 struct WidgetCategory: Codable, Hashable, Identifiable {
     let id: String
     let name: String
@@ -51,6 +49,11 @@ class SpecialDaysListViewModel: ObservableObject {
     
     @Published var cloudKitState: CloudKitState = .idle
     @Published var isSignedInToiCloud: Bool = false
+    
+    // NEW: Properties to manage the presentation of the sharing sheet.
+    @Published var shareToShow: CKShare?
+    @Published var categoryToShare: SpecialDayCategory?
+    @Published var isShowingSharingView = false
 
     // MARK: - Private Properties
     private let allDaysColorKey = "allDaysCategoryColorHex"
@@ -88,7 +91,6 @@ class SpecialDaysListViewModel: ObservableObject {
         switch status {
         case .available:
             migrateDataToCloudKit { [weak self] in
-                // Perform a normal fetch (with loading screen) on initial launch.
                 self?.fetchCategoriesAndSpecialDays()
             }
         case .noAccount, .restricted, .couldNotDetermine:
@@ -100,7 +102,6 @@ class SpecialDaysListViewModel: ObservableObject {
     
     // MARK: - Data Fetching
     
-    // FIXED: This function now supports a 'silent' mode for background refreshes.
     func fetchCategoriesAndSpecialDays(isSilent: Bool = false) {
         if !isSilent {
             cloudKitState = .loading
@@ -136,7 +137,6 @@ class SpecialDaysListViewModel: ObservableObject {
     // MARK: - Data Modification (CRUD Operations)
     
     func addCategory(_ category: SpecialDayCategory) {
-        // Optimistic UI Update: Add the category to the local array immediately.
         DispatchQueue.main.async {
             self.categories.append(category)
         }
@@ -146,11 +146,9 @@ class SpecialDaysListViewModel: ObservableObject {
                 if let error = error {
                     print("Error saving category: \(error.localizedDescription)")
                     self?.cloudKitState = .error(error)
-                    // Rollback: If the save fails, remove the optimistically added category.
                     self?.categories.removeAll { $0.id == category.id }
                     return
                 }
-                // On success, perform a silent refresh to get the final server state.
                 self?.fetchCategoriesAndSpecialDays(isSilent: true)
             }
         }
@@ -169,7 +167,6 @@ class SpecialDaysListViewModel: ObservableObject {
             
         let allRecordIDsToDelete = categoryIDsToDelete + specialDayIDsToDelete
         
-        // Optimistic UI Update for deletion.
         DispatchQueue.main.async {
             self.categories.remove(atOffsets: offsets)
         }
@@ -185,12 +182,10 @@ class SpecialDaysListViewModel: ObservableObject {
                 switch result {
                 case .success:
                     print("Successfully deleted \(allRecordIDsToDelete.count) records from CloudKit.")
-                    // Silent refresh to ensure data consistency.
                     self?.fetchCategoriesAndSpecialDays(isSilent: true)
                 case .failure(let error):
                     print("Error deleting categories from CloudKit: \(error.localizedDescription)")
                     self?.cloudKitState = .error(error)
-                    // On failure, do a full refresh to restore the UI to the server state.
                     self?.fetchCategoriesAndSpecialDays()
                 }
             }
@@ -200,7 +195,6 @@ class SpecialDaysListViewModel: ObservableObject {
     }
     
     func addSpecialDay(_ day: SpecialDayModel) {
-        // Optimistic UI Update
         DispatchQueue.main.async {
             self.specialDays.append(day)
             self.sortSpecialDays()
@@ -211,12 +205,10 @@ class SpecialDaysListViewModel: ObservableObject {
                 if let error = error {
                     print("Error saving special day: \(error.localizedDescription)")
                     self?.cloudKitState = .error(error)
-                    // Rollback
                     self?.specialDays.removeAll { $0.id == day.id }
                     return
                 }
                 
-                // Silent refresh
                 self?.fetchCategoriesAndSpecialDays(isSilent: true)
                 if let savedRecord = savedRecord, let updatedDay = SpecialDayModel(record: savedRecord) {
                     self?.reminderManager.scheduleReminder(for: updatedDay)
@@ -234,7 +226,6 @@ class SpecialDaysListViewModel: ObservableObject {
                     return
                 }
                 
-                // Perform a silent refresh.
                 self?.fetchCategoriesAndSpecialDays(isSilent: true)
                 if let savedRecord = savedRecord, let updatedDay = SpecialDayModel(record: savedRecord) {
                     self?.reminderManager.scheduleReminder(for: updatedDay)
@@ -255,8 +246,23 @@ class SpecialDaysListViewModel: ObservableObject {
                     self?.cloudKitState = .error(error)
                     return
                 }
-                // Perform a silent refresh.
                 self?.fetchCategoriesAndSpecialDays(isSilent: true)
+            }
+        }
+    }
+    
+    // NEW: Function to initiate the sharing process.
+    func shareCategory(_ category: SpecialDayCategory) {
+        Task {
+            do {
+                let share = try await CloudKitManager.shared.fetchOrCreateShare(for: category)
+                await MainActor.run {
+                    self.categoryToShare = category
+                    self.shareToShow = share
+                    self.isShowingSharingView = true
+                }
+            } catch {
+                print("Failed to fetch or create share: \(error.localizedDescription)")
             }
         }
     }

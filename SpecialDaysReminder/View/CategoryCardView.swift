@@ -12,6 +12,8 @@ struct CategoryCardView: View {
     let specialDays: [SpecialDayModel]
     
     let onAddTapped: () -> Void
+    // NEW: A closure to handle the share button tap.
+    let onShareTapped: () -> Void
     let onDayTapped: (SpecialDayModel) -> Void
 
     var customTitle: String?
@@ -20,7 +22,6 @@ struct CategoryCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                // UPDATED: Changed from Image to Text to display the emoji
                 Text(customIcon ?? category.icon)
                     .font(.title)
                 
@@ -30,6 +31,16 @@ struct CategoryCardView: View {
                     .foregroundColor(.white)
 
                 Spacer()
+                
+                // NEW: Added a share button next to the add button.
+                Button(action: onShareTapped) {
+                    Image(systemName: "square.and.arrow.up.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .padding(5)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Circle())
+                }
                 
                 Button(action: onAddTapped) {
                     Image(systemName: "plus.circle.fill")

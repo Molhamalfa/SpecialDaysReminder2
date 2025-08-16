@@ -29,11 +29,9 @@ struct SpecialDaysListView: View {
     @State private var selectedCategoryForAdd: SpecialDayCategory?
     @State private var navigationPath = NavigationPath()
     
-    // The deep link now uses CKRecord.ID's recordName which is a String.
     @Binding var deepLinkEventID: String?
     @Binding var deepLinkAddEvent: Bool
 
-    // REMOVED: Header animation states are no longer needed as the title is now in the navigation bar.
     @State private var allDaysCardOpacity: Double = 0
     @State private var allDaysCardOffset: CGFloat = -20
     @State private var categoryGridOpacity: Double = 0
@@ -49,14 +47,11 @@ struct SpecialDaysListView: View {
             ZStack {
                 Color.white.edgesIgnoringSafeArea(.all)
 
-                // Main UI now switches based on the CloudKit state.
                 switch viewModel.cloudKitState {
                 case .loading, .idle:
                     ProgressView("Loading Your Special Days...")
                 
                 case .loaded:
-                    // The content view is only shown when data is successfully loaded.
-                    // NOTE: You will need to remove the headerOpacity and headerOffset parameters from your SpecialDaysContentView.swift file.
                     SpecialDaysContentView(
                         viewModel: viewModel,
                         allDaysCardOpacity: allDaysCardOpacity,
@@ -68,11 +63,14 @@ struct SpecialDaysListView: View {
                         onAddTapped: { category in
                             self.selectedCategoryForAdd = category
                             self.showingAddSpecialDaySheet = true
+                        },
+                        // Connect the share button tap to the view model's new function.
+                        onShareTapped: { category in
+                            viewModel.shareCategory(category)
                         }
                     )
                 
                 case .error(let error):
-                    // A dedicated view for showing errors.
                     VStack(spacing: 15) {
                         Image(systemName: "exclamationmark.icloud.fill")
                             .font(.largeTitle)
@@ -94,7 +92,6 @@ struct SpecialDaysListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if case .loaded = viewModel.cloudKitState {
-                    // FIXED: Added a ToolbarItem for the title to place it in the navigation bar.
                     ToolbarItem(placement: .principal) {
                         Text("Your Special Days")
                             .font(.headline)
@@ -128,8 +125,18 @@ struct SpecialDaysListView: View {
             .sheet(isPresented: $showingAddSpecialDaySheet) {
                 AddSpecialDayView(viewModel: viewModel, initialCategory: selectedCategoryForAdd)
             }
+            // NEW: Add a sheet modifier to present the sharing view.
+            .sheet(isPresented: $viewModel.isShowingSharingView) {
+                if let share = viewModel.shareToShow, let category = viewModel.categoryToShare {
+                    CloudKitSharingView(share: share, container: CloudKitManager.shared.container, categoryToShare: category) {
+                        // When the sheet is dismissed, clear the share-related properties.
+                        viewModel.isShowingSharingView = false
+                        viewModel.shareToShow = nil
+                        viewModel.categoryToShare = nil
+                    }
+                }
+            }
             .navigationDestination(for: NavigationDestinationType.self) { destination in
-                // Navigation destinations updated to use new models and IDs.
                 switch destination {
                 case .allSpecialDaysDetail:
                     CategoryDetailView(viewModel: viewModel, category: nil, navigationPath: $navigationPath)
@@ -149,23 +156,18 @@ struct SpecialDaysListView: View {
             }
         }
         .onAppear {
-            // Animations now trigger when the state becomes .loaded.
             if case .loaded = viewModel.cloudKitState {
-                // REMOVED: Animation for the old header view.
                 withAnimation(.easeOut(duration: 0.5).delay(0.1)) { allDaysCardOpacity = 1; allDaysCardOffset = 0 }
                 withAnimation(.easeOut(duration: 0.5).delay(0.2)) { categoryGridOpacity = 1; categoryGridOffset = 0 }
             }
         }
         .onChange(of: viewModel.cloudKitState) { _, newState in
-             // Trigger animation when data is loaded.
             if case .loaded = newState {
-                // REMOVED: Animation for the old header view.
                 withAnimation(.easeOut(duration: 0.5).delay(0.1)) { allDaysCardOpacity = 1; allDaysCardOffset = 0 }
                 withAnimation(.easeOut(duration: 0.5).delay(0.2)) { categoryGridOpacity = 1; categoryGridOffset = 0 }
             }
         }
         .onChange(of: deepLinkEventID) { _, newEventIDString in
-            // Deep link logic updated for CKRecord.ID's recordName.
             if let eventIDString = newEventIDString, let day = viewModel.specialDays.first(where: { $0.id.recordName == eventIDString }) {
                 navigationPath = NavigationPath()
                 if let category = viewModel.category(for: day) {
