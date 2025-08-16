@@ -102,7 +102,12 @@ struct SpecialDaysListView: View {
                 AddSpecialDayView(viewModel: viewModel, initialCategory: selectedCategoryForAdd)
             }
             // Add a sheet modifier to present the sharing view.
-            .sheet(isPresented: $viewModel.isShowingSharingView) {
+            .sheet(isPresented: $viewModel.isShowingSharingView, onDismiss: {
+                // UPDATED: Whenever the sharing sheet is dismissed, for any reason,
+                // perform a silent refresh of the data from CloudKit. This ensures
+                // the app has the latest share information and prevents state issues.
+                viewModel.fetchCategoriesAndSpecialDays(isSilent: true)
+            }) {
                 if let share = viewModel.shareToShow, let category = viewModel.categoryToShare {
                     CloudKitSharingView(share: share, container: CloudKitManager.shared.container, categoryToShare: category) {
                         // When the sheet is dismissed, clear the share-related properties.

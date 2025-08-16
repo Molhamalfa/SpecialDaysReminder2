@@ -24,8 +24,12 @@ struct CloudKitSharingView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UICloudSharingController {
         let sharingController = UICloudSharingController(share: share, container: container)
         sharingController.delegate = context.coordinator
-        // Define the permissions the user can grant (e.g., read-only or read-write).
-        sharingController.availablePermissions = [.allowReadWrite, .allowReadOnly]
+        
+        // UPDATED: All explicit permission configuration has been removed.
+        // The controller will now use its default behavior based on the share object it receives.
+        // Since the CloudKitManager now creates a private share, the controller will
+        // automatically show the "Add People" button in the management view.
+        
         return sharingController
     }
 
