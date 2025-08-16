@@ -59,12 +59,20 @@
 			);
 			target = 046158EA2E37DCBD00E2036D /* SpecialDaysWidgetExtension */;
 		};
+		04F06F992E4FC85B00058739 /* Exceptions for "SpecialDaysReminder" folder in "SpecialDaysReminder" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 04470EE42E37CC7100A4CFB6 /* SpecialDaysReminder */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		04470EE72E37CC7100A4CFB6 /* SpecialDaysReminder */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				04F06F992E4FC85B00058739 /* Exceptions for "SpecialDaysReminder" folder in "SpecialDaysReminder" target */,
 				046159092E37E26700E2036D /* Exceptions for "SpecialDaysReminder" folder in "SpecialDaysWidgetExtension" target */,
 			);
 			path = SpecialDaysReminder;
@@ -391,6 +399,8 @@
 				DEVELOPMENT_TEAM = 63GW6H7Q9U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SpecialDaysReminder/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app needs access to your calendar to import events and create reminders.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -421,6 +431,8 @@
 				DEVELOPMENT_TEAM = 63GW6H7Q9U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SpecialDaysReminder/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app needs access to your calendar to import events and create reminders.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
