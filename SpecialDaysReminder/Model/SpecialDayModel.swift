@@ -41,8 +41,8 @@ extension Color {
     }
 }
 
-
-public struct SpecialDayCategory: Identifiable, Hashable {
+// FIXED: Added @unchecked Sendable conformance to resolve capture errors.
+public struct SpecialDayCategory: Identifiable, Hashable, @unchecked Sendable {
     private(set) var record: CKRecord
     var isShared: Bool
     
@@ -95,8 +95,8 @@ public struct SpecialDayCategory: Identifiable, Hashable {
     }
 }
 
-// SpecialDayModel remains unchanged.
-public struct SpecialDayModel: Identifiable {
+// FIXED: Added @unchecked Sendable conformance to resolve capture errors.
+public struct SpecialDayModel: Identifiable, @unchecked Sendable {
     private(set) var record: CKRecord
     
     public var id: CKRecord.ID { record.recordID }

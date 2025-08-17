@@ -12,17 +12,17 @@ struct CategoryCardView: View {
     let specialDays: [SpecialDayModel]
     
     let onAddTapped: () -> Void
-    let onShareTapped: (() -> Void)?
+    // REMOVED: The onShareTapped closure has been removed.
     let onDayTapped: (SpecialDayModel) -> Void
 
     var customTitle: String?
     var customIcon: String?
     
-    init(category: SpecialDayCategory, specialDays: [SpecialDayModel], onAddTapped: @escaping () -> Void, onShareTapped: (() -> Void)? = nil, onDayTapped: @escaping (SpecialDayModel) -> Void, customTitle: String? = nil, customIcon: String? = nil) {
+    // UPDATED: The initializer no longer accepts an onShareTapped closure.
+    init(category: SpecialDayCategory, specialDays: [SpecialDayModel], onAddTapped: @escaping () -> Void, onDayTapped: @escaping (SpecialDayModel) -> Void, customTitle: String? = nil, customIcon: String? = nil) {
         self.category = category
         self.specialDays = specialDays
         self.onAddTapped = onAddTapped
-        self.onShareTapped = onShareTapped
         self.onDayTapped = onDayTapped
         self.customTitle = customTitle
         self.customIcon = customIcon
@@ -39,7 +39,6 @@ struct CategoryCardView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
 
-                // NEW: If the category is shared, show an indicator icon.
                 if category.isShared {
                     Image(systemName: "person.2.fill")
                         .font(.caption)
@@ -48,17 +47,7 @@ struct CategoryCardView: View {
 
                 Spacer()
                 
-                // Don't show the share button on an already shared category.
-                if let onShareTapped = onShareTapped, !category.isShared {
-                    Button(action: onShareTapped) {
-                        Image(systemName: "square.and.arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding(5)
-                            .background(Color.white.opacity(0.2))
-                            .clipShape(Circle())
-                    }
-                }
+                // REMOVED: The entire share button block.
                 
                 Button(action: onAddTapped) {
                     Image(systemName: "plus.circle.fill")

@@ -20,6 +20,9 @@ struct ImportableCalendarEvent: Identifiable {
     }
 }
 
+// UPDATED: Added @MainActor to ensure all properties and methods
+// are accessed on the main thread, resolving the concurrency error.
+@MainActor
 class CalendarImportViewModel: ObservableObject {
     @Published var importableEvents: [ImportableCalendarEvent] = []
     @Published var calendarAuthorized: Bool = false
@@ -120,7 +123,6 @@ class CalendarImportViewModel: ObservableObject {
             forWhom: ekEvent.notes ?? "N/A",
             category: nil,
             notes: ekEvent.notes,
-            // FIXED: Changed 'isYearly' to 'recurrence' to match the data model.
             recurrence: .oneTime
         )
     }

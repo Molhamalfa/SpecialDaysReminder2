@@ -22,12 +22,16 @@ enum NavigationDestinationType: Hashable {
 }
 
 struct SpecialDaysListView: View {
-    @StateObject var viewModel = SpecialDaysListViewModel()
+    @EnvironmentObject var iapManager: IAPManager
+    
+    @StateObject var viewModel: SpecialDaysListViewModel
     
     @State private var showingAddSpecialDaySheet: Bool = false
     @State private var showingAddCategorySheet: Bool = false
     @State private var selectedCategoryForAdd: SpecialDayCategory?
     @State private var navigationPath = NavigationPath()
+    
+    @State private var showingPremiumSheet = false
     
     @Binding var deepLinkEventID: String?
     @Binding var deepLinkAddEvent: Bool
@@ -37,7 +41,8 @@ struct SpecialDaysListView: View {
     @State private var categoryGridOpacity: Double = 0
     @State private var categoryGridOffset: CGFloat = -20
 
-    init(deepLinkEventID: Binding<String?>, deepLinkAddEvent: Binding<Bool>) {
+    init(iapManager: IAPManager, deepLinkEventID: Binding<String?>, deepLinkAddEvent: Binding<Bool>) {
+        _viewModel = StateObject(wrappedValue: SpecialDaysListViewModel(iapManager: iapManager))
         _deepLinkEventID = deepLinkEventID
         _deepLinkAddEvent = deepLinkAddEvent
     }
@@ -45,24 +50,7 @@ struct SpecialDaysListView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                contentView // The main content is now in a separate computed property.
-                
-                // An overlay to show the loading indicator when preparing a share.
-                if viewModel.isPreparingShare {
-                    Color.black.opacity(0.4)
-                        .edgesIgnoringSafeArea(.all)
-                    
-                    VStack {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        Text("Sharing Category...")
-                            .foregroundColor(.white)
-                            .padding(.top, 8)
-                    }
-                    .padding(30)
-                    .background(Color.black.opacity(0.6))
-                    .cornerRadius(15)
-                }
+                contentView
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -96,33 +84,22 @@ struct SpecialDaysListView: View {
                 }
             }
             .sheet(isPresented: $showingAddCategorySheet) {
-                AddCategoryView(viewModel: viewModel)
+                AddCategoryView(viewModel: viewModel, showingPremiumSheet: $showingPremiumSheet)
             }
             .sheet(isPresented: $showingAddSpecialDaySheet) {
-                AddSpecialDayView(viewModel: viewModel, initialCategory: selectedCategoryForAdd)
+                AddSpecialDayView(viewModel: viewModel, initialCategory: selectedCategoryForAdd, showingPremiumSheet: $showingPremiumSheet)
             }
-            // Add a sheet modifier to present the sharing view.
-            .sheet(isPresented: $viewModel.isShowingSharingView, onDismiss: {
-                // UPDATED: Whenever the sharing sheet is dismissed, for any reason,
-                // perform a silent refresh of the data from CloudKit. This ensures
-                // the app has the latest share information and prevents state issues.
-                viewModel.fetchCategoriesAndSpecialDays(isSilent: true)
-            }) {
-                if let share = viewModel.shareToShow, let category = viewModel.categoryToShare {
-                    CloudKitSharingView(share: share, container: CloudKitManager.shared.container, categoryToShare: category) {
-                        // When the sheet is dismissed, clear the share-related properties.
-                        viewModel.isShowingSharingView = false
-                        viewModel.shareToShow = nil
-                        viewModel.categoryToShare = nil
-                    }
-                }
+            .sheet(isPresented: $showingPremiumSheet) {
+                PremiumFeaturesView()
             }
             .navigationDestination(for: NavigationDestinationType.self) { destination in
                 switch destination {
                 case .allSpecialDaysDetail:
-                    CategoryDetailView(viewModel: viewModel, category: nil, navigationPath: $navigationPath)
+                    // FIXED: Pass the showingPremiumSheet binding.
+                    CategoryDetailView(viewModel: viewModel, category: nil, navigationPath: $navigationPath, showingPremiumSheet: $showingPremiumSheet)
                 case .categoryDetail(let category):
-                    CategoryDetailView(viewModel: viewModel, category: category, navigationPath: $navigationPath)
+                    // FIXED: Pass the showingPremiumSheet binding.
+                    CategoryDetailView(viewModel: viewModel, category: category, navigationPath: $navigationPath, showingPremiumSheet: $showingPremiumSheet)
                 case .editSpecialDay(let identifiableRecordID):
                     if let dayToEdit = viewModel.specialDays.first(where: { $0.id == identifiableRecordID.id }) {
                         EditSpecialDayView(viewModel: viewModel, specialDay: dayToEdit)
@@ -188,10 +165,6 @@ struct SpecialDaysListView: View {
                     onAddTapped: { category in
                         self.selectedCategoryForAdd = category
                         self.showingAddSpecialDaySheet = true
-                    },
-                    // Connect the share button tap to the view model's new function.
-                    onShareTapped: { category in
-                        viewModel.shareCategory(category)
                     }
                 )
             

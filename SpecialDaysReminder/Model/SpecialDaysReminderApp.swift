@@ -6,44 +6,39 @@
 //
 
 import SwiftUI
-import UIKit // Import UIKit to access UIApplication
+import UIKit
 
-// Create a delegate to handle app lifecycle events.
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        // Move the registration call here. This is the correct place to
-        // perform tasks on app launch.
         application.registerForRemoteNotifications()
         return true
-    }
-    
-    // Optional: Handle successful registration
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        print("Successfully registered for remote notifications.")
-    }
-    
-    // Optional: Handle failed registration
-    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("Failed to register for remote notifications: \(error.localizedDescription)")
     }
 }
 
 @main
 struct SpecialDaysReminderApp: App {
-    // Use the @UIApplicationDelegateAdaptor property wrapper to connect the delegate.
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     @State private var deepLinkEventID: String? = nil
     @State private var deepLinkAddEvent: Bool = false
 
-    @StateObject private var calendarManager = CalendarManager()
+    // Create instances of the store and IAP managers.
+    @StateObject private var storeManager: StoreManager
+    @StateObject private var iapManager: IAPManager
 
-    // The problematic init() has been removed.
-    
+    init() {
+        let storeManager = StoreManager()
+        _storeManager = StateObject(wrappedValue: storeManager)
+        _iapManager = StateObject(wrappedValue: IAPManager(storeManager: storeManager))
+    }
+
     var body: some Scene {
         WindowGroup {
-            SpecialDaysListView(deepLinkEventID: $deepLinkEventID, deepLinkAddEvent: $deepLinkAddEvent)
+            SpecialDaysListView(iapManager: iapManager, deepLinkEventID: $deepLinkEventID, deepLinkAddEvent: $deepLinkAddEvent)
                 .preferredColorScheme(.light)
+                // Provide the managers to the entire view hierarchy.
+                .environmentObject(storeManager)
+                .environmentObject(iapManager)
                 .onOpenURL { url in
                     guard url.scheme == "specialdaysreminder" else {
                         return
@@ -59,15 +54,6 @@ struct SpecialDaysReminderApp: App {
                         self.deepLinkEventID = eventIDString
                     } else if url.host == "add" {
                         self.deepLinkAddEvent = true
-                    }
-                }
-                .onAppear {
-                    calendarManager.requestCalendarAuthorization { granted, error in
-                        if granted {
-                            print("Initial calendar authorization request granted.")
-                        } else {
-                            print("Initial calendar authorization request denied or failed: \(error?.localizedDescription ?? "Unknown error")")
-                        }
                     }
                 }
         }

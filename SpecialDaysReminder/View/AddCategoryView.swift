@@ -11,10 +11,11 @@ import Combine
 struct AddCategoryView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: SpecialDaysListViewModel
+    
+    @Binding var showingPremiumSheet: Bool
 
     @State private var name: String = ""
     @State private var selectedColor: Color = .blue
-    // UPDATED: The initial state is now an empty string
     @State private var selectedIcon: String = ""
 
     var body: some View {
@@ -24,7 +25,6 @@ struct AddCategoryView: View {
                 CategoryColorSection(selectedColor: $selectedColor)
                 
                 Section(header: Text("Icon")) {
-                    // UPDATED: The placeholder text is now "Add Emoji"
                     EmojiTextField(text: $selectedIcon, placeholder: "Add Emoji")
                         .font(.largeTitle)
                         .padding()
@@ -43,11 +43,15 @@ struct AddCategoryView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        // Use the selected icon, or a default if none is chosen
-                        let iconToSave = selectedIcon.isEmpty ? "⭐️" : selectedIcon
-                        let newCategory = SpecialDayCategory(name: name, color: selectedColor, icon: iconToSave)
-                        viewModel.addCategory(newCategory)
-                        dismiss()
+                        if !viewModel.isPremiumUser && viewModel.categories.count >= 1 {
+                            showingPremiumSheet = true
+                            dismiss()
+                        } else {
+                            let iconToSave = selectedIcon.isEmpty ? "⭐️" : selectedIcon
+                            let newCategory = SpecialDayCategory(name: name, color: selectedColor, icon: iconToSave)
+                            viewModel.addCategory(newCategory)
+                            dismiss()
+                        }
                     }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
@@ -77,6 +81,3 @@ private struct CategoryColorSection: View {
         }
     }
 }
-
-// This helper view was moved to its own file (EmojiTextField.swift) to resolve a redeclaration error.
-// If you encounter an error that EmojiTextField is not found, ensure you have that file in your project.

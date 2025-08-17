@@ -9,6 +9,9 @@ import Foundation
 import SwiftUI
 import Combine
 
+// UPDATED: Added @MainActor to ensure all properties and methods
+// are accessed on the main thread, resolving the concurrency errors.
+@MainActor
 class EditCategoriesViewModel: ObservableObject {
     @Published var categories: [SpecialDayCategory]
     

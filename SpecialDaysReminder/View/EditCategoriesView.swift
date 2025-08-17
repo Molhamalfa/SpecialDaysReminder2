@@ -57,6 +57,8 @@ struct EditCategoriesView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") {
+                        // UPDATED: Call the new save function before dismissing.
+                        viewModel.updateCategories(viewModel.categories)
                         dismiss()
                     }
                 }

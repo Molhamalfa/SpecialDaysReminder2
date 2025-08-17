@@ -10,7 +10,6 @@ import SwiftUI
 struct SpecialDaysContentView: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
 
-    // REMOVED: The animation states for the old header are no longer needed.
     let allDaysCardOpacity: Double
     let allDaysCardOffset: CGFloat
     let categoryGridOpacity: Double
@@ -20,16 +19,12 @@ struct SpecialDaysContentView: View {
     @Binding var showingAddCategorySheet: Bool
     @Binding var navigationPath: NavigationPath
     let onAddTapped: (SpecialDayCategory?) -> Void
-    // NEW: A closure to handle the share button tap from the grid.
-    let onShareTapped: (SpecialDayCategory) -> Void
+    // REMOVED: The onShareTapped closure is no longer needed.
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // The root view is a ScrollView.
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 20) {
-                    // REMOVED: The SpecialDaysHeaderView has been deleted from this VStack.
-                    
                     AllSpecialDaysCardView(
                         viewModel: viewModel,
                         allDaysCardOpacity: allDaysCardOpacity,
@@ -47,20 +42,14 @@ struct SpecialDaysContentView: View {
                         onAddTapped: { category in
                             onAddTapped(category)
                         },
-                        // FIXED: Added the missing onShareTapped parameter.
-                        onShareTapped: { category in
-                            onShareTapped(category)
-                        },
+                        // REMOVED: The onShareTapped closure has been removed.
                         navigationPath: $navigationPath
                     )
                 }
-                // Added top padding to give space below the new navigation bar title.
                 .padding(.top, 20)
-                // Padding to ensure the last card isn't hidden by the floating button.
                 .padding(.bottom, 100)
             }
 
-            // The button remains in the ZStack, fixed at the bottom.
             AddButtonView {
                 showingAddCategorySheet = true
             }

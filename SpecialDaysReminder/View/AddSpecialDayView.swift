@@ -12,12 +12,13 @@ struct AddSpecialDayView: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
     @Environment(\.dismiss) var dismiss
     
+    @Binding var showingPremiumSheet: Bool
+    
     let initialCategory: SpecialDayCategory?
     
     @State private var name: String = ""
     @State private var date: Date = Date()
     @State private var forWhom: String = ""
-    // The category ID is now a CKRecord.ID.
     @State private var categoryID: CKRecord.ID?
     @State private var notes: String = ""
     @State private var recurrence: RecurrenceType = .yearly
@@ -28,10 +29,10 @@ struct AddSpecialDayView: View {
     @State private var reminderFrequency: Int = 1
     @State private var reminderTimes: [Date] = [AddSpecialDayView.defaultTime()]
 
-    init(viewModel: SpecialDaysListViewModel, initialCategory: SpecialDayCategory?) {
+    init(viewModel: SpecialDaysListViewModel, initialCategory: SpecialDayCategory?, showingPremiumSheet: Binding<Bool>) {
         _viewModel = ObservedObject(wrappedValue: viewModel)
         self.initialCategory = initialCategory
-        // Set the initial category ID from the new model.
+        _showingPremiumSheet = showingPremiumSheet
         _categoryID = State(initialValue: initialCategory?.id)
     }
 
@@ -75,25 +76,28 @@ struct AddSpecialDayView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        // Find the selected category from the view model.
-                        let selectedCategory = viewModel.categories.first { $0.id == categoryID }
-                        
-                        // Create the new SpecialDayModel using the CloudKit-ready initializer.
-                        let newDay = SpecialDayModel(
-                            name: name,
-                            date: date,
-                            forWhom: forWhom,
-                            category: selectedCategory, // Pass the whole category object.
-                            notes: notes.isEmpty ? nil : notes,
-                            recurrence: recurrence,
-                            isAllDay: isAllDay,
-                            reminderEnabled: reminderEnabled,
-                            reminderDaysBefore: reminderDaysBefore,
-                            reminderFrequency: reminderFrequency,
-                            reminderTimes: reminderEnabled ? reminderTimes : []
-                        )
-                        viewModel.addSpecialDay(newDay)
-                        dismiss()
+                        if !viewModel.isPremiumUser && viewModel.specialDays.count >= 3 {
+                            showingPremiumSheet = true
+                            dismiss()
+                        } else {
+                            let selectedCategory = viewModel.categories.first { $0.id == categoryID }
+                            
+                            let newDay = SpecialDayModel(
+                                name: name,
+                                date: date,
+                                forWhom: forWhom,
+                                category: selectedCategory,
+                                notes: notes.isEmpty ? nil : notes,
+                                recurrence: recurrence,
+                                isAllDay: isAllDay,
+                                reminderEnabled: reminderEnabled,
+                                reminderDaysBefore: reminderDaysBefore,
+                                reminderFrequency: reminderFrequency,
+                                reminderTimes: reminderEnabled ? reminderTimes : []
+                            )
+                            viewModel.addSpecialDay(newDay)
+                            dismiss()
+                        }
                     }
                     .disabled(isSaveButtonDisabled)
                 }
@@ -122,7 +126,6 @@ private struct AddEventDetailsSection: View {
             TextField("For Whom", text: $forWhom)
             Picker("Category", selection: $categoryID) {
                 Text("Uncategorized").tag(nil as CKRecord.ID?)
-                // The picker now iterates over the new category models.
                 ForEach(viewModel.categories) { cat in
                     HStack {
                         Text(cat.icon)
@@ -143,7 +146,6 @@ private struct AddEventDetailsSection: View {
     }
 }
 
-// AddReminderSettingsSection remains unchanged.
 private struct AddReminderSettingsSection: View {
     @Binding var reminderEnabled: Bool
     @Binding var reminderDaysBefore: Int

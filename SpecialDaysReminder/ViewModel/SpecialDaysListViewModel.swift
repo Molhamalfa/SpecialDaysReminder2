@@ -39,6 +39,7 @@ struct WidgetSpecialDay: Codable, Hashable, Identifiable {
 }
 
 
+@MainActor
 class SpecialDaysListViewModel: ObservableObject {
 
     // MARK: - Published Properties
@@ -50,11 +51,7 @@ class SpecialDaysListViewModel: ObservableObject {
     @Published var cloudKitState: CloudKitState = .idle
     @Published var isSignedInToiCloud: Bool = false
     
-    // Properties to manage the presentation of the sharing sheet and loading state.
-    @Published var isPreparingShare = false
-    @Published var shareToShow: CKShare?
-    @Published var categoryToShare: SpecialDayCategory?
-    @Published var isShowingSharingView = false
+    @Published var isPremiumUser: Bool = false
 
     // MARK: - Private Properties
     private let allDaysColorKey = "allDaysCategoryColorHex"
@@ -63,11 +60,20 @@ class SpecialDaysListViewModel: ObservableObject {
     
     private let reminderManager = ReminderManager()
     private var cancellables = Set<AnyCancellable>()
+    
+    private var iapManager: IAPManager
 
     // MARK: - Initialization
-    init() {
+    init(iapManager: IAPManager) {
+        self.iapManager = iapManager
+        self.isPremiumUser = iapManager.isPremiumUser
+        
         sharedUserDefaults = UserDefaults(suiteName: appGroupIdentifier)
         loadAllDaysCategoryColor()
+        
+        iapManager.$isPremiumUser
+            .assign(to: \.isPremiumUser, on: self)
+            .store(in: &cancellables)
         
         CloudKitManager.shared.accountStatusPublisher
             .receive(on: DispatchQueue.main)
@@ -96,6 +102,7 @@ class SpecialDaysListViewModel: ObservableObject {
             }
         case .noAccount, .restricted, .couldNotDetermine:
             self.cloudKitState = .error(CloudKitError.iCloudAccountNotFound)
+        // FIXED: Added @unknown default to make the switch exhaustive.
         @unknown default:
             self.cloudKitState = .error(CloudKitError.iCloudAccountUnknown)
         }
@@ -153,6 +160,28 @@ class SpecialDaysListViewModel: ObservableObject {
                 self?.fetchCategoriesAndSpecialDays(isSilent: true)
             }
         }
+    }
+    
+    func updateCategories(_ updatedCategories: [SpecialDayCategory]) {
+        let recordsToSave = updatedCategories.map { $0.record }
+        
+        let operation = CKModifyRecordsOperation(recordsToSave: recordsToSave, recordIDsToDelete: nil)
+        operation.savePolicy = .changedKeys
+        
+        operation.modifyRecordsResultBlock = { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("Successfully updated \(recordsToSave.count) categories.")
+                    self?.fetchCategoriesAndSpecialDays(isSilent: true)
+                case .failure(let error):
+                    print("Error updating categories: \(error.localizedDescription)")
+                    self?.cloudKitState = .error(error)
+                }
+            }
+        }
+        
+        CloudKitManager.shared.privateDatabase.add(operation)
     }
     
     func deleteCategory(at offsets: IndexSet) {
@@ -248,29 +277,6 @@ class SpecialDaysListViewModel: ObservableObject {
                     return
                 }
                 self?.fetchCategoriesAndSpecialDays(isSilent: true)
-            }
-        }
-    }
-    
-    func shareCategory(_ category: SpecialDayCategory) {
-        Task {
-            await MainActor.run {
-                self.isPreparingShare = true
-            }
-            
-            do {
-                let share = try await CloudKitManager.shared.fetchOrCreateShare(for: category)
-                await MainActor.run {
-                    self.isPreparingShare = false
-                    self.categoryToShare = category
-                    self.shareToShow = share
-                    self.isShowingSharingView = true
-                }
-            } catch {
-                print("Failed to fetch or create share: \(error.localizedDescription)")
-                await MainActor.run {
-                    self.isPreparingShare = false
-                }
             }
         }
     }

@@ -12,14 +12,11 @@ struct CategoryGridSectionView: View {
     let categoryGridOpacity: Double
     let categoryGridOffset: CGFloat
     
-    // This closure is passed from the parent to handle the tap action
     let onAddTapped: (SpecialDayCategory) -> Void
-    // NEW: A closure to handle the share button tap for a specific category.
-    let onShareTapped: (SpecialDayCategory) -> Void
+    // REMOVED: The onShareTapped closure has been removed.
     @Binding var navigationPath: NavigationPath
 
     var body: some View {
-        // Changed from LazyVGrid to VStack to make each card full-width
         VStack(spacing: 15) {
             ForEach(viewModel.categories, id: \.id) { category in
                 NavigationLink(value: NavigationDestinationType.categoryDetail(category)) {
@@ -29,11 +26,7 @@ struct CategoryGridSectionView: View {
                         onAddTapped: {
                             onAddTapped(category)
                         },
-                        // FIXED: Added the onShareTapped parameter.
-                        // This will call the closure passed from the parent view.
-                        onShareTapped: {
-                            onShareTapped(category)
-                        },
+                        // REMOVED: The onShareTapped parameter is no longer passed.
                         onDayTapped: { day in
                             navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id)))
                         }

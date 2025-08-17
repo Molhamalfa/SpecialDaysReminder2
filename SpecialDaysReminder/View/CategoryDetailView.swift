@@ -15,13 +15,18 @@ struct CategoryDetailView: View {
     let category: SpecialDayCategory?
     @Binding var navigationPath: NavigationPath
     
+    // NEW: Binding to control the premium sheet presentation.
+    @Binding var showingPremiumSheet: Bool
+    
     @State private var showingAddSpecialDaySheet = false
     @Environment(\.dismiss) var dismiss
 
-    init(viewModel: SpecialDaysListViewModel, category: SpecialDayCategory?, navigationPath: Binding<NavigationPath>) {
+    // UPDATED: The initializer now accepts the showingPremiumSheet binding.
+    init(viewModel: SpecialDaysListViewModel, category: SpecialDayCategory?, navigationPath: Binding<NavigationPath>, showingPremiumSheet: Binding<Bool>) {
         _specialDaysListViewModel = ObservedObject(wrappedValue: viewModel)
         self.category = category
         _navigationPath = navigationPath
+        _showingPremiumSheet = showingPremiumSheet
         _categoryDetailViewModel = StateObject(wrappedValue: CategoryDetailViewModel(category: category, specialDaysListViewModel: viewModel))
     }
 
@@ -36,7 +41,6 @@ struct CategoryDetailView: View {
 
             List {
                 ForEach(categoryDetailViewModel.specialDaysForCategory) { day in
-                    // Navigation now uses the IdentifiableCKRecordID wrapper.
                     NavigationLink(value: NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id))) {
                         SpecialDayRowView(day: day, themeColor: category?.color ?? .purple)
                     }
@@ -44,7 +48,6 @@ struct CategoryDetailView: View {
                     .listRowSeparator(.hidden)
                     .swipeActions {
                         Button(role: .destructive) {
-                            // Deletion now passes the CKRecord.ID.
                             categoryDetailViewModel.deleteDay(id: day.id)
                         } label: {
                             Label("Delete", systemImage: "trash.fill")
@@ -72,7 +75,8 @@ struct CategoryDetailView: View {
                 }
             }
             .sheet(isPresented: $showingAddSpecialDaySheet) {
-                AddSpecialDayView(viewModel: specialDaysListViewModel, initialCategory: category)
+                // FIXED: Pass the showingPremiumSheet binding to the AddSpecialDayView.
+                AddSpecialDayView(viewModel: specialDaysListViewModel, initialCategory: category, showingPremiumSheet: $showingPremiumSheet)
             }
         }
     }

@@ -9,6 +9,9 @@ import Foundation
 import Combine
 import CloudKit
 
+// UPDATED: Added @MainActor to ensure all properties and methods
+// are accessed on the main thread, resolving the concurrency errors.
+@MainActor
 class CategoryDetailViewModel: ObservableObject {
     @Published var specialDaysForCategory: [SpecialDayModel] = []
 

@@ -10,11 +10,8 @@ import SwiftUI
 import Foundation
 
 // MARK: - Widget-Specific Data Models
-// These are simple, Codable structs for the widget to decode from UserDefaults.
-// The main app will be responsible for creating and saving these.
-
 struct WidgetCategory: Codable, Hashable, Identifiable {
-    let id: String // Using the recordName as the ID
+    let id: String
     let name: String
     let colorHex: String
     let icon: String
@@ -23,7 +20,7 @@ struct WidgetCategory: Codable, Hashable, Identifiable {
 }
 
 struct WidgetSpecialDay: Codable, Hashable, Identifiable {
-    let id: String // Using the recordName as the ID
+    let id: String
     let name: String
     let date: Date
     let forWhom: String
@@ -32,7 +29,6 @@ struct WidgetSpecialDay: Codable, Hashable, Identifiable {
     let isAllDay: Bool
     let categoryID: String?
     
-    // Computed properties to calculate countdowns, similar to the main app model.
     var nextOccurrenceDate: Date {
         let calendar = Calendar.current
         var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
@@ -84,13 +80,12 @@ struct WidgetSpecialDay: Codable, Hashable, Identifiable {
 // MARK: - Widget Entry
 struct SpecialDaysWidgetEntry: TimelineEntry {
     let date: Date
-    // The entry now uses our new widget-specific models.
     let specialDays: [WidgetSpecialDay]
     let categories: [WidgetCategory]
+    let isPremiumUser: Bool
 
     var deepLinkURL: URL? {
         guard let day = specialDays.first else { return nil }
-        // The deep link now uses the 'id' (recordName) property.
         return URL(string: "specialdaysreminder://event?id=\(day.id)")
     }
 
@@ -102,7 +97,6 @@ struct SpecialDaysWidgetEntry: TimelineEntry {
 // MARK: - Timeline Provider
 struct SpecialDaysTimelineProvider: TimelineProvider {
     private let appGroupIdentifier = "group.com.molham.SpecialDaysReminder"
-    // Using new keys to avoid conflicts with any old, stale data.
     private let specialDaysKey = "widgetSpecialDays"
     private let categoriesKey = "widgetCategories"
 
@@ -113,7 +107,7 @@ struct SpecialDaysTimelineProvider: TimelineProvider {
     func placeholder(in context: Context) -> SpecialDaysWidgetEntry {
         let sampleCategory = WidgetCategory(id: "sampleCategory", name: "Sample", colorHex: "#0000FF", icon: "🎉")
         let sampleDay = WidgetSpecialDay(id: "sampleDay", name: "Sample Event", date: Date().addingTimeInterval(86400 * 5), forWhom: "Preview", notes: nil, recurrenceRawValue: "Yearly", isAllDay: true, categoryID: sampleCategory.id)
-        return SpecialDaysWidgetEntry(date: Date(), specialDays: [sampleDay], categories: [sampleCategory])
+        return SpecialDaysWidgetEntry(date: Date(), specialDays: [sampleDay], categories: [sampleCategory], isPremiumUser: true)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SpecialDaysWidgetEntry) -> Void) {
@@ -123,7 +117,6 @@ struct SpecialDaysTimelineProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SpecialDaysWidgetEntry>) -> Void) {
         let currentEntry = fetchNextUpcomingDayEntry()
-        // FIXED: Added the 'to: Date()' parameter to specify the date to add the hour to.
         let nextUpdateDate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
         let timeline = Timeline(entries: [currentEntry], policy: .after(nextUpdateDate))
         completion(timeline)
@@ -131,8 +124,10 @@ struct SpecialDaysTimelineProvider: TimelineProvider {
 
     private func fetchNextUpcomingDayEntry() -> SpecialDaysWidgetEntry {
         guard let userDefaults = sharedUserDefaults else {
-            return SpecialDaysWidgetEntry(date: Date(), specialDays: [], categories: [])
+            return SpecialDaysWidgetEntry(date: Date(), specialDays: [], categories: [], isPremiumUser: false)
         }
+        
+        let isPremium = userDefaults.bool(forKey: "isPremiumUser")
 
         var allCategories: [WidgetCategory] = []
         if let categoriesData = userDefaults.data(forKey: categoriesKey),
@@ -154,51 +149,53 @@ struct SpecialDaysTimelineProvider: TimelineProvider {
         }
 
         guard let firstUpcomingDay = allDays.first(where: { $0.daysUntil >= 0 }) else {
-            return SpecialDaysWidgetEntry(date: Date(), specialDays: [], categories: [])
+            return SpecialDaysWidgetEntry(date: Date(), specialDays: [], categories: [], isPremiumUser: isPremium)
         }
 
         let daysForTimeline = allDays.filter {
             Calendar.current.isDate($0.nextOccurrenceDate, inSameDayAs: firstUpcomingDay.nextOccurrenceDate)
         }
 
-        return SpecialDaysWidgetEntry(date: Date(), specialDays: daysForTimeline, categories: allCategories)
+        return SpecialDaysWidgetEntry(date: Date(), specialDays: daysForTimeline, categories: allCategories, isPremiumUser: isPremium)
     }
 }
 
 // MARK: - Widget View (and its helper views)
-// All views are updated to work with the new WidgetSpecialDay and WidgetCategory models.
-
 struct SpecialDaysWidgetView: View {
     let entry: SpecialDaysWidgetEntry
     @Environment(\.widgetFamily) var family
 
     var body: some View {
-        if let firstDay = entry.specialDays.first {
-            let singleEventCategory = entry.categories.first { $0.id == firstDay.categoryID }
+        if entry.isPremiumUser {
+            if let firstDay = entry.specialDays.first {
+                let singleEventCategory = entry.categories.first { $0.id == firstDay.categoryID }
 
-            switch family {
-            case .systemSmall:
-                SmallWidgetView(day: firstDay, eventCount: entry.specialDays.count)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                    .padding()
-                    .widgetURL(entry.deepLinkURL)
-                    .containerBackground(for: .widget) { singleEventCategory?.color ?? .gray }
+                switch family {
+                case .systemSmall:
+                    SmallWidgetView(day: firstDay, eventCount: entry.specialDays.count)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .padding()
+                        .widgetURL(entry.deepLinkURL)
+                        .containerBackground(for: .widget) { singleEventCategory?.color ?? .gray }
 
-            case .systemMedium:
-                if entry.specialDays.count == 1 {
-                    MediumSingleEventView(day: firstDay, category: singleEventCategory)
-                } else {
-                    MultiEventHorizontalView(entry: entry, limit: 4)
+                case .systemMedium:
+                    if entry.specialDays.count == 1 {
+                        MediumSingleEventView(day: firstDay, category: singleEventCategory)
+                    } else {
+                        MultiEventHorizontalView(entry: entry, limit: 4)
+                    }
+                
+                case .systemLarge:
+                    MultiEventVerticalView(entry: entry, limit: 4)
+
+                default:
+                    EmptyView()
                 }
-            
-            case .systemLarge:
-                MultiEventVerticalView(entry: entry, limit: 4)
-
-            default:
-                EmptyView()
+            } else {
+                NoEventsView()
             }
         } else {
-            NoEventsView()
+            PremiumLockedWidgetView()
         }
     }
 }
@@ -379,6 +376,24 @@ private struct NoEventsView: View {
         }
         .foregroundColor(.primary)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+        .containerBackground(for: .widget) { Color(.systemGray6) }
+    }
+}
+
+private struct PremiumLockedWidgetView: View {
+    var body: some View {
+        VStack(alignment: .center, spacing: 8) {
+            Image(systemName: "lock.fill")
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
+            Text("Widgets are a Premium Feature")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+            Text("Upgrade in the app to unlock.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
         .padding()
         .containerBackground(for: .widget) { Color(.systemGray6) }
     }
