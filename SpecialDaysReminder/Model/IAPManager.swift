@@ -8,8 +8,6 @@
 import Foundation
 import Combine
 
-// UPDATED: Added @MainActor to ensure all properties and methods
-// are accessed on the main thread, resolving the concurrency error.
 @MainActor
 class IAPManager: ObservableObject {
     @Published private(set) var isPremiumUser: Bool = false
@@ -22,7 +20,6 @@ class IAPManager: ObservableObject {
         self.storeManager = storeManager
         self.isPremiumUser = UserDefaults.standard.bool(forKey: userDefaultsKey)
         
-        // Observe changes in purchased products from the StoreManager.
         storeManager.$purchasedProductIDs
             .receive(on: DispatchQueue.main)
             .sink { [weak self] purchasedIDs in
@@ -32,7 +29,8 @@ class IAPManager: ObservableObject {
     }
 
     private func updatePremiumStatus(for purchasedIDs: Set<String>) {
-        let hasPremium = purchasedIDs.contains(ProductIdentifiers.unlockPremium)
+        // UPDATED: Check if the set of purchased IDs contains *any* of our subscription products.
+        let hasPremium = !purchasedIDs.isDisjoint(with: ProductIdentifiers.all)
         
         if self.isPremiumUser != hasPremium {
             self.isPremiumUser = hasPremium

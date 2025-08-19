@@ -14,7 +14,6 @@ struct PremiumFeaturesView: View {
     
     var body: some View {
         ZStack {
-            // Background gradient
             LinearGradient(
                 gradient: Gradient(colors: [Color.purple.opacity(0.8), Color.blue.opacity(0.8)]),
                 startPoint: .topLeading,
@@ -37,11 +36,13 @@ struct PremiumFeaturesView: View {
 
                 Spacer()
 
-                if let premiumProduct = storeManager.products.first {
-                    PurchaseButton(product: premiumProduct)
+                // UPDATED: Replaced ForEach with a simple check for the first (and only) product.
+                if let annualProduct = storeManager.products.first {
+                    PurchaseButton(product: annualProduct)
                 } else {
-                    ProgressView()
+                    ProgressView("Loading Offer...")
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .foregroundColor(.white)
                 }
                 
                 RestoreButton()
@@ -96,11 +97,20 @@ private struct PurchaseButton: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                     .frame(maxWidth: .infinity)
             } else {
-                Text("Upgrade for \(product.displayPrice)")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.purple)
-                    .frame(maxWidth: .infinity)
+                VStack {
+                    Text("\(product.displayName) - \(product.displayPrice)")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                    
+                    if let introOffer = product.subscription?.introductoryOffer,
+                       introOffer.paymentMode == .freeTrial {
+                        Text("Starts with a \(introOffer.period.value)-day free trial")
+                            .font(.caption)
+                            .foregroundColor(.purple.opacity(0.8))
+                    }
+                }
+                .foregroundColor(.purple)
+                .frame(maxWidth: .infinity)
             }
         }
         .padding()

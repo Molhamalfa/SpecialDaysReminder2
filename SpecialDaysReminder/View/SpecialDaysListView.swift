@@ -22,6 +22,7 @@ enum NavigationDestinationType: Hashable {
 }
 
 struct SpecialDaysListView: View {
+    // This view will now receive the IAPManager from the environment.
     @EnvironmentObject var iapManager: IAPManager
     
     @StateObject var viewModel: SpecialDaysListViewModel
@@ -41,6 +42,7 @@ struct SpecialDaysListView: View {
     @State private var categoryGridOpacity: Double = 0
     @State private var categoryGridOffset: CGFloat = -20
 
+    // UPDATED: The initializer now correctly accepts the IAPManager.
     init(iapManager: IAPManager, deepLinkEventID: Binding<String?>, deepLinkAddEvent: Binding<Bool>) {
         _viewModel = StateObject(wrappedValue: SpecialDaysListViewModel(iapManager: iapManager))
         _deepLinkEventID = deepLinkEventID
@@ -95,10 +97,8 @@ struct SpecialDaysListView: View {
             .navigationDestination(for: NavigationDestinationType.self) { destination in
                 switch destination {
                 case .allSpecialDaysDetail:
-                    // FIXED: Pass the showingPremiumSheet binding.
                     CategoryDetailView(viewModel: viewModel, category: nil, navigationPath: $navigationPath, showingPremiumSheet: $showingPremiumSheet)
                 case .categoryDetail(let category):
-                    // FIXED: Pass the showingPremiumSheet binding.
                     CategoryDetailView(viewModel: viewModel, category: category, navigationPath: $navigationPath, showingPremiumSheet: $showingPremiumSheet)
                 case .editSpecialDay(let identifiableRecordID):
                     if let dayToEdit = viewModel.specialDays.first(where: { $0.id == identifiableRecordID.id }) {

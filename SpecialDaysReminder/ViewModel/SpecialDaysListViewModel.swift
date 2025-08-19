@@ -102,7 +102,6 @@ class SpecialDaysListViewModel: ObservableObject {
             }
         case .noAccount, .restricted, .couldNotDetermine:
             self.cloudKitState = .error(CloudKitError.iCloudAccountNotFound)
-        // FIXED: Added @unknown default to make the switch exhaustive.
         @unknown default:
             self.cloudKitState = .error(CloudKitError.iCloudAccountUnknown)
         }
@@ -144,20 +143,24 @@ class SpecialDaysListViewModel: ObservableObject {
 
     // MARK: - Data Modification (CRUD Operations)
     
+    // UPDATED: This function now correctly handles the UI update after a successful save.
     func addCategory(_ category: SpecialDayCategory) {
-        DispatchQueue.main.async {
-            self.categories.append(category)
-        }
-        
         CloudKitManager.shared.privateDatabase.save(category.record) { [weak self] (savedRecord, error) in
             DispatchQueue.main.async {
+                guard let self = self else { return }
+
                 if let error = error {
                     print("Error saving category: \(error.localizedDescription)")
-                    self?.cloudKitState = .error(error)
-                    self?.categories.removeAll { $0.id == category.id }
+                    self.cloudKitState = .error(error)
                     return
                 }
-                self?.fetchCategoriesAndSpecialDays(isSilent: true)
+                
+                // On success, create a model from the confirmed saved record
+                // and append it to the local array. This prevents the UI flicker.
+                if let savedRecord = savedRecord, let newCategory = SpecialDayCategory(record: savedRecord) {
+                    self.categories.append(newCategory)
+                    self.saveDataForWidget() // Ensure widget data is updated
+                }
             }
         }
     }
@@ -225,23 +228,20 @@ class SpecialDaysListViewModel: ObservableObject {
     }
     
     func addSpecialDay(_ day: SpecialDayModel) {
-        DispatchQueue.main.async {
-            self.specialDays.append(day)
-            self.sortSpecialDays()
-        }
-        
         CloudKitManager.shared.privateDatabase.save(day.record) { [weak self] (savedRecord, error) in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 if let error = error {
                     print("Error saving special day: \(error.localizedDescription)")
-                    self?.cloudKitState = .error(error)
-                    self?.specialDays.removeAll { $0.id == day.id }
+                    self.cloudKitState = .error(error)
                     return
                 }
                 
-                self?.fetchCategoriesAndSpecialDays(isSilent: true)
-                if let savedRecord = savedRecord, let updatedDay = SpecialDayModel(record: savedRecord) {
-                    self?.reminderManager.scheduleReminder(for: updatedDay)
+                if let savedRecord = savedRecord, let newDay = SpecialDayModel(record: savedRecord) {
+                    self.specialDays.append(newDay)
+                    self.sortSpecialDays()
+                    self.saveDataForWidget()
+                    self.reminderManager.scheduleReminder(for: newDay)
                 }
             }
         }

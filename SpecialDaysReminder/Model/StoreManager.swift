@@ -8,10 +8,10 @@
 import Foundation
 import StoreKit
 
-// Define the identifiers for your in-app purchases.
-// These must match what you set up in App Store Connect.
+// UPDATED: Product identifiers now only contain the annual subscription.
 enum ProductIdentifiers {
-    static let unlockPremium = "com.molham.SpecialDaysReminder.unlockPremium"
+    static let annual = "com.molham.SpecialDaysReminder.annual"
+    static let all = [annual]
 }
 
 // Custom error for StoreKit operations.
@@ -35,14 +35,11 @@ class StoreManager: ObservableObject {
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedProductIDs: Set<String> = []
     
-    // Listener for transaction updates.
     private var transactionListener: Task<Void, Error>? = nil
 
     init() {
-        // Start listening for transaction changes as soon as the manager is initialized.
         transactionListener = listenForTransactions()
         
-        // Fetch products from the App Store.
         Task {
             await fetchProducts()
             await updatePurchasedProducts()
@@ -56,7 +53,7 @@ class StoreManager: ObservableObject {
     // Fetches product definitions from the App Store.
     func fetchProducts() async {
         do {
-            let storeProducts = try await Product.products(for: [ProductIdentifiers.unlockPremium])
+            let storeProducts = try await Product.products(for: ProductIdentifiers.all)
             self.products = storeProducts
         } catch {
             print("Failed to fetch products: \(error)")
@@ -69,7 +66,6 @@ class StoreManager: ObservableObject {
 
         switch result {
         case .success(let verification):
-            // Verify the transaction.
             let transaction = try checkVerified(verification)
             await updatePurchasedProducts()
             await transaction.finish()
@@ -81,7 +77,6 @@ class StoreManager: ObservableObject {
         }
     }
     
-    // Restores previously purchased non-consumable products.
     func restorePurchases() async {
         try? await AppStore.sync()
     }
@@ -90,25 +85,28 @@ class StoreManager: ObservableObject {
     private func listenForTransactions() -> Task<Void, Error> {
         return Task.detached {
             for await result in Transaction.updates {
-                do {
-                    // UPDATED: Switched to MainActor to safely update published properties.
-                    await MainActor.run {
-                        do {
-                            let transaction = try self.checkVerified(result)
+                await MainActor.run {
+                    do {
+                        let transaction = try self.checkVerified(result)
+                        
+                        if transaction.revocationDate == nil {
                             self.purchasedProductIDs.insert(transaction.productID)
-                            Task {
-                                await transaction.finish()
-                            }
-                        } catch {
-                            print("Transaction failed verification inside MainActor run: \(error)")
+                        } else {
+                            self.purchasedProductIDs.remove(transaction.productID)
                         }
+                        
+                        Task {
+                            await transaction.finish()
+                        }
+                        
+                    } catch {
+                        print("Transaction listener failed to process update: \(error)")
                     }
                 }
             }
         }
     }
 
-    // Checks if a transaction is valid and verified.
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
         switch result {
         case .unverified:
@@ -118,16 +116,20 @@ class StoreManager: ObservableObject {
         }
     }
 
-    // Updates the set of purchased product IDs.
+    // The logic here is robust. `currentEntitlements` automatically checks for active subscriptions.
     @MainActor
     private func updatePurchasedProducts() async {
+        var updatedPurchasedIDs = Set<String>()
         for await result in Transaction.currentEntitlements {
             do {
                 let transaction = try checkVerified(result)
-                purchasedProductIDs.insert(transaction.productID)
+                if transaction.revocationDate == nil {
+                    updatedPurchasedIDs.insert(transaction.productID)
+                }
             } catch {
                 print("Failed to verify purchased product: \(error)")
             }
         }
+        self.purchasedProductIDs = updatedPurchasedIDs
     }
 }
