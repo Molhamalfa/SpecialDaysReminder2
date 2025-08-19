@@ -22,7 +22,6 @@ enum NavigationDestinationType: Hashable {
 }
 
 struct SpecialDaysListView: View {
-    // This view will now receive the IAPManager from the environment.
     @EnvironmentObject var iapManager: IAPManager
     
     @StateObject var viewModel: SpecialDaysListViewModel
@@ -42,7 +41,6 @@ struct SpecialDaysListView: View {
     @State private var categoryGridOpacity: Double = 0
     @State private var categoryGridOffset: CGFloat = -20
 
-    // UPDATED: The initializer now correctly accepts the IAPManager.
     init(iapManager: IAPManager, deepLinkEventID: Binding<String?>, deepLinkAddEvent: Binding<Bool>) {
         _viewModel = StateObject(wrappedValue: SpecialDaysListViewModel(iapManager: iapManager))
         _deepLinkEventID = deepLinkEventID
@@ -79,8 +77,8 @@ struct SpecialDaysListView: View {
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
-                                .font(.title2)
-                                .foregroundColor(.black)
+                                // Use .primary color to adapt to light/dark mode.
+                                .foregroundColor(.primary)
                         }
                     }
                 }
@@ -147,7 +145,9 @@ struct SpecialDaysListView: View {
     @ViewBuilder
     private var contentView: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            // UPDATED: Use a system background color that adapts to dark mode.
+            Color(.systemGroupedBackground)
+                .edgesIgnoringSafeArea(.all)
 
             switch viewModel.cloudKitState {
             case .loading, .idle:

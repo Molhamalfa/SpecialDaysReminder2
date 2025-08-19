@@ -69,6 +69,6 @@ struct CalendarImportView: View {
                 viewModel.checkCalendarAuthorizationStatus()
             }
         }
-        .preferredColorScheme(.dark) // This view will now be in dark mode
+        // REMOVED: .preferredColorScheme(.dark) to allow this view to adapt.
     }
 }

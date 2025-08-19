@@ -12,7 +12,6 @@ struct SpecialDayRowView: View {
     let themeColor: Color
 
     var body: some View {
-        // Main container for the card-like appearance
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(day.name)
@@ -31,7 +30,7 @@ struct SpecialDayRowView: View {
                 Text(day.daysUntilDescription)
                     .font(.title3)
                     .fontWeight(.heavy)
-                    .foregroundColor(themeColor) // Use the category color for emphasis
+                    .foregroundColor(themeColor)
                 
                 Text(day.formattedDate)
                     .font(.caption)
@@ -39,10 +38,11 @@ struct SpecialDayRowView: View {
             }
         }
         .padding()
-        // Use the system background color for adaptability to light/dark mode
-        .background(Color(.systemBackground))
+        // Use a secondary system background for a subtle layered effect.
+        .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(15)
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        .padding(.vertical, 4) // Add vertical space between each card
+        // Use a semantic color for the shadow that adapts.
+        .shadow(color: .secondary.opacity(0.15), radius: 5, x: 0, y: 2)
+        .padding(.vertical, 4)
     }
 }

@@ -22,12 +22,10 @@ struct SpecialDaysReminderApp: App {
     @State private var deepLinkEventID: String? = nil
     @State private var deepLinkAddEvent: Bool = false
 
-    // Create instances of the store and IAP managers.
     @StateObject private var storeManager: StoreManager
     @StateObject private var iapManager: IAPManager
 
     init() {
-        // Initialize the managers.
         let storeManager = StoreManager()
         _storeManager = StateObject(wrappedValue: storeManager)
         _iapManager = StateObject(wrappedValue: IAPManager(storeManager: storeManager))
@@ -35,10 +33,9 @@ struct SpecialDaysReminderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // Pass the iapManager to the list view's initializer.
             SpecialDaysListView(iapManager: iapManager, deepLinkEventID: $deepLinkEventID, deepLinkAddEvent: $deepLinkAddEvent)
-                .preferredColorScheme(.light)
-                // Provide the managers to the entire view hierarchy.
+                // REMOVED: The .preferredColorScheme(.light) modifier has been removed
+                // to allow the app to adapt to the system's appearance.
                 .environmentObject(storeManager)
                 .environmentObject(iapManager)
                 .onOpenURL { url in
