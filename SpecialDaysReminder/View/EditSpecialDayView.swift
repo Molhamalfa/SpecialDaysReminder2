@@ -15,9 +15,10 @@ struct EditSpecialDayView: View {
     @State private var specialDay: SpecialDayModel
     @State private var reminderTimes: [Date]
     
-    // NEW: Local state variables to drive the UI instantly.
     @State private var isAllDay: Bool
     @State private var reminderEnabled: Bool
+    
+    @State private var showSettingsAlert = false
     
     private var themeColor: Color {
         if let category = viewModel.category(for: specialDay) {
@@ -30,7 +31,6 @@ struct EditSpecialDayView: View {
         _viewModel = ObservedObject(wrappedValue: viewModel)
         _specialDay = State(initialValue: specialDay)
         
-        // Initialize the local state from the model.
         _isAllDay = State(initialValue: specialDay.isAllDay)
         _reminderEnabled = State(initialValue: specialDay.reminderEnabled)
         
@@ -51,10 +51,8 @@ struct EditSpecialDayView: View {
             Section(header: Text("Event Details")) {
                 TextField("Event Name", text: $specialDay.name)
                 
-                // This DatePicker now correctly observes the local 'isAllDay' state.
                 DatePicker("Date", selection: $specialDay.date, displayedComponents: isAllDay ? .date : [.date, .hourAndMinute])
 
-                // This Toggle now binds to the local 'isAllDay' state.
                 Toggle("All-Day Event", isOn: $isAllDay.animation())
 
                 TextField("For Whom", text: $specialDay.forWhom)
@@ -83,11 +81,19 @@ struct EditSpecialDayView: View {
             
             // MARK: - Reminder Settings Section
             Section(header: Text("Reminder")) {
-                // This Toggle now binds to the local 'reminderEnabled' state.
                 Toggle("Enable Reminders", isOn: $reminderEnabled)
                     .tint(themeColor)
+                    .onChange(of: reminderEnabled) { _, newValue in
+                        if newValue {
+                            viewModel.requestNotificationPermission { granted in
+                                if !granted {
+                                    showSettingsAlert = true
+                                    reminderEnabled = false
+                                }
+                            }
+                        }
+                    }
                 
-                // This section now correctly appears/disappears based on the local state.
                 if reminderEnabled {
                     Picker("Start Reminders", selection: $specialDay.reminderDaysBefore) {
                         ForEach(1...7, id: \.self) { day in
@@ -129,7 +135,6 @@ struct EditSpecialDayView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Save") {
-                    // Before saving, sync the local UI state back to the main model.
                     specialDay.isAllDay = isAllDay
                     specialDay.reminderEnabled = reminderEnabled
                     specialDay.reminderTimes = reminderEnabled ? reminderTimes : []
@@ -139,6 +144,20 @@ struct EditSpecialDayView: View {
                 }
             }
         }
-        .onAppear { viewModel.requestNotificationPermission() }
+        .alert("Enable Notifications", isPresented: $showSettingsAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        } message: {
+            Text("To enable reminders, you need to grant notification permissions in the Settings app.")
+        }
+        .onAppear {
+            viewModel.requestNotificationPermission { _ in
+                // No action is needed here, as this is just a pre-emptive check.
+            }
+        }
     }
 }

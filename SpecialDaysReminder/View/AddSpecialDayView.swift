@@ -28,6 +28,9 @@ struct AddSpecialDayView: View {
     @State private var reminderDaysBefore: Int = 1
     @State private var reminderFrequency: Int = 1
     @State private var reminderTimes: [Date] = [AddSpecialDayView.defaultTime()]
+    
+    // NEW: State to control the settings alert.
+    @State private var showSettingsAlert = false
 
     init(viewModel: SpecialDaysListViewModel, initialCategory: SpecialDayCategory?, showingPremiumSheet: Binding<Bool>) {
         _viewModel = ObservedObject(wrappedValue: viewModel)
@@ -65,7 +68,9 @@ struct AddSpecialDayView: View {
                     reminderFrequency: $reminderFrequency,
                     reminderTimes: $reminderTimes,
                     eventDate: $date,
-                    isAllDay: $isAllDay
+                    isAllDay: $isAllDay,
+                    viewModel: viewModel,
+                    showSettingsAlert: $showSettingsAlert // Pass the binding down
                 )
             }
             .navigationTitle("Add Special Day")
@@ -76,7 +81,7 @@ struct AddSpecialDayView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        if !viewModel.isPremiumUser && viewModel.specialDays.count >= 3 {
+                        if !viewModel.isPremiumUser && viewModel.specialDays.count >= 5 {
                             showingPremiumSheet = true
                             dismiss()
                         } else {
@@ -101,6 +106,17 @@ struct AddSpecialDayView: View {
                     }
                     .disabled(isSaveButtonDisabled)
                 }
+            }
+            // Add the alert modifier to this view as well.
+            .alert("Enable Notifications", isPresented: $showSettingsAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } message: {
+                Text("To enable reminders, you need to grant notification permissions in the Settings app.")
             }
         }
     }
@@ -153,6 +169,9 @@ private struct AddReminderSettingsSection: View {
     @Binding var reminderTimes: [Date]
     @Binding var eventDate: Date
     @Binding var isAllDay: Bool
+    
+    var viewModel: SpecialDaysListViewModel
+    @Binding var showSettingsAlert: Bool
 
     private var reminderTimeRange: PartialRangeThrough<Date> {
         return ...eventDate
@@ -161,6 +180,16 @@ private struct AddReminderSettingsSection: View {
     var body: some View {
         Section(header: Text("Reminder")) {
             Toggle("Enable Reminders", isOn: $reminderEnabled.animation())
+                .onChange(of: reminderEnabled) { _, newValue in
+                    if newValue {
+                        viewModel.requestNotificationPermission { granted in
+                            if !granted {
+                                showSettingsAlert = true
+                                reminderEnabled = false
+                            }
+                        }
+                    }
+                }
             
             if reminderEnabled {
                 Picker("Start Reminders", selection: $reminderDaysBefore) {

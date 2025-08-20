@@ -68,7 +68,11 @@ struct CalendarImportView: View {
             .onAppear {
                 viewModel.checkCalendarAuthorizationStatus()
             }
+            // UPDATED: Added a .sheet modifier to observe the viewModel's
+            // showPremiumSheet property and present the PremiumFeaturesView.
+            .sheet(isPresented: $viewModel.showPremiumSheet) {
+                PremiumFeaturesView()
+            }
         }
-        // REMOVED: .preferredColorScheme(.dark) to allow this view to adapt.
     }
 }

@@ -102,6 +102,7 @@ class SpecialDaysListViewModel: ObservableObject {
             }
         case .noAccount, .restricted, .couldNotDetermine:
             self.cloudKitState = .error(CloudKitError.iCloudAccountNotFound)
+        // This is the required fix for the "Switch must be exhaustive" error.
         @unknown default:
             self.cloudKitState = .error(CloudKitError.iCloudAccountUnknown)
         }
@@ -143,7 +144,6 @@ class SpecialDaysListViewModel: ObservableObject {
 
     // MARK: - Data Modification (CRUD Operations)
     
-    // UPDATED: This function now correctly handles the UI update after a successful save.
     func addCategory(_ category: SpecialDayCategory) {
         CloudKitManager.shared.privateDatabase.save(category.record) { [weak self] (savedRecord, error) in
             DispatchQueue.main.async {
@@ -155,11 +155,9 @@ class SpecialDaysListViewModel: ObservableObject {
                     return
                 }
                 
-                // On success, create a model from the confirmed saved record
-                // and append it to the local array. This prevents the UI flicker.
                 if let savedRecord = savedRecord, let newCategory = SpecialDayCategory(record: savedRecord) {
                     self.categories.append(newCategory)
-                    self.saveDataForWidget() // Ensure widget data is updated
+                    self.saveDataForWidget()
                 }
             }
         }
@@ -281,6 +279,35 @@ class SpecialDaysListViewModel: ObservableObject {
         }
     }
     
+    func deleteAllUserData() {
+        let allCategoryIDs = categories.map { $0.id }
+        let allSpecialDayIDs = specialDays.map { $0.id }
+        let allRecordIDsToDelete = allCategoryIDs + allSpecialDayIDs
+        
+        guard !allRecordIDsToDelete.isEmpty else {
+            print("No user data to delete.")
+            return
+        }
+        
+        let operation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: allRecordIDsToDelete)
+        operation.modifyRecordsResultBlock = { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("Successfully deleted all user data.")
+                    self?.categories = []
+                    self?.specialDays = []
+                    self?.fetchCategoriesAndSpecialDays()
+                case .failure(let error):
+                    print("Error deleting all user data: \(error.localizedDescription)")
+                    self?.cloudKitState = .error(error)
+                }
+            }
+        }
+        
+        CloudKitManager.shared.privateDatabase.add(operation)
+    }
+    
     // MARK: - Helper & Utility Functions
     
     private func sortSpecialDays() {
@@ -302,8 +329,8 @@ class SpecialDaysListViewModel: ObservableObject {
         return specialDays.filter { $0.categoryReference?.recordID == category.id }
     }
     
-    func requestNotificationPermission() {
-        reminderManager.requestNotificationAuthorization { _ in }
+    func requestNotificationPermission(completion: @escaping (Bool) -> Void) {
+        reminderManager.requestNotificationAuthorization(completion: completion)
     }
     
     // MARK: - UserDefaults for Simple Config & Widget

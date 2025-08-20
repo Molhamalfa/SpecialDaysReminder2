@@ -20,14 +20,15 @@ struct ImportableCalendarEvent: Identifiable {
     }
 }
 
-// UPDATED: Added @MainActor to ensure all properties and methods
-// are accessed on the main thread, resolving the concurrency error.
 @MainActor
 class CalendarImportViewModel: ObservableObject {
     @Published var importableEvents: [ImportableCalendarEvent] = []
     @Published var calendarAuthorized: Bool = false
     @Published var statusMessage: String?
     @Published var isLoading: Bool = false
+    
+    // NEW: A property to signal the view to show the premium sheet.
+    @Published var showPremiumSheet: Bool = false
 
     private let calendarManager = CalendarManager()
     private var specialDaysListViewModel: SpecialDaysListViewModel
@@ -128,18 +129,31 @@ class CalendarImportViewModel: ObservableObject {
     }
 
     func importSelectedEvents() {
-        let selectedDays = importableEvents.filter { $0.isSelected }.compactMap {
-            self.convertEKEventToSpecialDayModel(ekEvent: $0.ekEvent)
-        }
+        let selectedEvents = importableEvents.filter { $0.isSelected }
 
-        if selectedDays.isEmpty {
+        if selectedEvents.isEmpty {
             statusMessage = "No events selected for import."
             return
+        }
+        
+        let freeEventLimit = 5
+        let currentEventCount = specialDaysListViewModel.specialDays.count
+        let eventsToImportCount = selectedEvents.count
+        
+        if !specialDaysListViewModel.isPremiumUser && (currentEventCount + eventsToImportCount > freeEventLimit) {
+            // UPDATED: Instead of setting a status message, trigger the premium sheet.
+            showPremiumSheet = true
+            return
+        }
+
+        let selectedDays = selectedEvents.compactMap {
+            self.convertEKEventToSpecialDayModel(ekEvent: $0.ekEvent)
         }
 
         for day in selectedDays {
             specialDaysListViewModel.addSpecialDay(day)
         }
+        
         statusMessage = "Successfully imported \(selectedDays.count) event(s)."
         importableEvents.removeAll { $0.isSelected }
     }

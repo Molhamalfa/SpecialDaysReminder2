@@ -13,13 +13,22 @@ class ReminderManager {
     // MARK: - Notification Permissions
 
     func requestNotificationAuthorization(completion: @escaping (Bool) -> Void) {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
             DispatchQueue.main.async {
-                if granted {
-                    print("Notification authorization granted.")
+                switch settings.authorizationStatus {
+                case .authorized, .provisional:
                     completion(true)
-                } else {
-                    print("Notification authorization denied: \(error?.localizedDescription ?? "Unknown error")")
+                case .notDetermined:
+                    center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                        DispatchQueue.main.async {
+                            completion(granted)
+                        }
+                    }
+                case .denied:
+                    completion(false)
+                // FIXED: Added @unknown default to make the switch exhaustive.
+                @unknown default:
                     completion(false)
                 }
             }
@@ -81,7 +90,6 @@ class ReminderManager {
                 }
                 content.sound = .default
 
-                // FIXED: Use the 'recordName' property of CKRecord.ID instead of 'uuidString'.
                 let notificationIdentifier = "\(day.id.recordName)-\(dayIndex)-\(timeIndex)"
 
                 let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
@@ -102,7 +110,6 @@ class ReminderManager {
 
     func cancelReminder(for day: SpecialDayModel) {
         UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            // FIXED: Use the 'recordName' property for filtering identifiers.
             let identifiersToCancel = requests
                 .filter { $0.identifier.hasPrefix(day.id.recordName) }
                 .map { $0.identifier }

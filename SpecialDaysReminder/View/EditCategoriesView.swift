@@ -11,6 +11,7 @@ import Combine
 struct EditCategoriesView: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var iapManager: IAPManager
 
     init(specialDaysListViewModel: SpecialDaysListViewModel) {
         _viewModel = ObservedObject(wrappedValue: specialDaysListViewModel)
@@ -51,13 +52,20 @@ struct EditCategoriesView: View {
                         viewModel.deleteCategory(at: indexSet)
                     })
                 }
+                
+                // Add a new section for debug settings that only appears in Debug builds.
+                #if DEBUG
+                Section(header: Text("Debug Settings")) {
+                    // This toggle binds directly to the debug property in the IAPManager.
+                    Toggle("Simulate Premium Status", isOn: $iapManager.isDebugPremium)
+                }
+                #endif
             }
             .navigationTitle("Edit Categories")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") {
-                        // UPDATED: Call the new save function before dismissing.
                         viewModel.updateCategories(viewModel.categories)
                         dismiss()
                     }

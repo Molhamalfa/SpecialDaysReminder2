@@ -33,6 +33,8 @@ struct SpecialDaysListView: View {
     
     @State private var showingPremiumSheet = false
     
+    @State private var showingLapsedSubscriptionAlert = false
+    
     @Binding var deepLinkEventID: String?
     @Binding var deepLinkAddEvent: Bool
 
@@ -51,6 +53,22 @@ struct SpecialDaysListView: View {
         NavigationStack(path: $navigationPath) {
             ZStack {
                 contentView
+                
+                // The old .alert has been removed and replaced with this ZStack
+                // overlay that presents our new custom view.
+                if showingLapsedSubscriptionAlert {
+                    LapsedSubscriptionView(
+                        onReturnToFree: {
+                            viewModel.deleteAllUserData()
+                            iapManager.subscriptionLapsed = false
+                            showingLapsedSubscriptionAlert = false
+                        },
+                        onContinueWithPremium: {
+                            showingLapsedSubscriptionAlert = false
+                            showingPremiumSheet = true
+                        }
+                    )
+                }
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -77,7 +95,6 @@ struct SpecialDaysListView: View {
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
-                                // Use .primary color to adapt to light/dark mode.
                                 .foregroundColor(.primary)
                         }
                     }
@@ -89,7 +106,13 @@ struct SpecialDaysListView: View {
             .sheet(isPresented: $showingAddSpecialDaySheet) {
                 AddSpecialDayView(viewModel: viewModel, initialCategory: selectedCategoryForAdd, showingPremiumSheet: $showingPremiumSheet)
             }
-            .sheet(isPresented: $showingPremiumSheet) {
+            .sheet(isPresented: $showingPremiumSheet, onDismiss: {
+                if !iapManager.isPremiumUser {
+                    showingLapsedSubscriptionAlert = true
+                } else {
+                    iapManager.subscriptionLapsed = false
+                }
+            }) {
                 PremiumFeaturesView()
             }
             .navigationDestination(for: NavigationDestinationType.self) { destination in
@@ -121,6 +144,18 @@ struct SpecialDaysListView: View {
             if case .loaded = newState {
                 withAnimation(.easeOut(duration: 0.5).delay(0.1)) { allDaysCardOpacity = 1; allDaysCardOffset = 0 }
                 withAnimation(.easeOut(duration: 0.5).delay(0.2)) { categoryGridOpacity = 1; categoryGridOffset = 0 }
+                
+                // UPDATED: Add a check here to catch free users who are over the limit on app launch.
+                let categoryLimit = 1
+                let eventLimit = 3
+                if !viewModel.isPremiumUser && (viewModel.categories.count > categoryLimit || viewModel.specialDays.count > eventLimit) {
+                    showingLapsedSubscriptionAlert = true
+                }
+            }
+        }
+        .onChange(of: iapManager.subscriptionLapsed) { _, hasLapsed in
+            if hasLapsed {
+                showingLapsedSubscriptionAlert = true
             }
         }
         .onChange(of: deepLinkEventID) { _, newEventIDString in
@@ -145,7 +180,6 @@ struct SpecialDaysListView: View {
     @ViewBuilder
     private var contentView: some View {
         ZStack {
-            // UPDATED: Use a system background color that adapts to dark mode.
             Color(.systemGroupedBackground)
                 .edgesIgnoringSafeArea(.all)
 
