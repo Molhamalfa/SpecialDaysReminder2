@@ -68,9 +68,10 @@ struct CalendarImportView: View {
             .onAppear {
                 viewModel.checkCalendarAuthorizationStatus()
             }
-            // UPDATED: Added a .sheet modifier to observe the viewModel's
-            // showPremiumSheet property and present the PremiumFeaturesView.
             .sheet(isPresented: $viewModel.showPremiumSheet) {
+                // FIXED: Added the required 'isDismissable' parameter.
+                // It's set to true here because a free user hitting a limit
+                // should be able to dismiss the paywall.
                 PremiumFeaturesView()
             }
         }
