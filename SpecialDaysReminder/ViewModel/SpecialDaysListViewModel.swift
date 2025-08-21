@@ -10,6 +10,7 @@ import Combine
 import WidgetKit
 import SwiftUI
 import CloudKit
+import StoreKit // Import StoreKit for the review prompt.
 
 // MARK: - ViewModel State
 enum CloudKitState {
@@ -62,6 +63,9 @@ class SpecialDaysListViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     
     private var iapManager: IAPManager
+    
+    private let hasShownReviewPromptForCategoryKey = "hasShownReviewPromptForCategory"
+    private let hasShownReviewPromptForEventKey = "hasShownReviewPromptForEvent"
 
     // MARK: - Initialization
     init(iapManager: IAPManager) {
@@ -102,7 +106,7 @@ class SpecialDaysListViewModel: ObservableObject {
             }
         case .noAccount, .restricted, .couldNotDetermine:
             self.cloudKitState = .error(CloudKitError.iCloudAccountNotFound)
-        // This is the required fix for the "Switch must be exhaustive" error.
+        // FIXED: This @unknown default case makes the switch exhaustive.
         @unknown default:
             self.cloudKitState = .error(CloudKitError.iCloudAccountUnknown)
         }
@@ -158,6 +162,8 @@ class SpecialDaysListViewModel: ObservableObject {
                 if let savedRecord = savedRecord, let newCategory = SpecialDayCategory(record: savedRecord) {
                     self.categories.append(newCategory)
                     self.saveDataForWidget()
+                    
+                    self.requestReviewForFirstCategory()
                 }
             }
         }
@@ -240,6 +246,8 @@ class SpecialDaysListViewModel: ObservableObject {
                     self.sortSpecialDays()
                     self.saveDataForWidget()
                     self.reminderManager.scheduleReminder(for: newDay)
+                    
+                    self.requestReviewForFirstEvent()
                 }
             }
         }
@@ -331,6 +339,31 @@ class SpecialDaysListViewModel: ObservableObject {
     
     func requestNotificationPermission(completion: @escaping (Bool) -> Void) {
         reminderManager.requestNotificationAuthorization(completion: completion)
+    }
+    
+    // NEW: Functions to handle review requests.
+    private func requestReviewForFirstCategory() {
+        guard let userDefaults = sharedUserDefaults else { return }
+        if !userDefaults.bool(forKey: hasShownReviewPromptForCategoryKey) {
+            requestReview()
+            userDefaults.set(true, forKey: hasShownReviewPromptForCategoryKey)
+        }
+    }
+
+    private func requestReviewForFirstEvent() {
+        guard let userDefaults = sharedUserDefaults else { return }
+        if !userDefaults.bool(forKey: hasShownReviewPromptForEventKey) {
+            requestReview()
+            userDefaults.set(true, forKey: hasShownReviewPromptForEventKey)
+        }
+    }
+
+    // FIXED: Updated to use the modern, non-deprecated review request API.
+    private func requestReview() {
+        if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            // This is the modern, non-async, non-throwing version of the API.
+            AppStore.requestReview(in: scene)
+        }
     }
     
     // MARK: - UserDefaults for Simple Config & Widget

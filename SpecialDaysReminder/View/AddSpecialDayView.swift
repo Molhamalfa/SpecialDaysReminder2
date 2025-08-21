@@ -29,7 +29,6 @@ struct AddSpecialDayView: View {
     @State private var reminderFrequency: Int = 1
     @State private var reminderTimes: [Date] = [AddSpecialDayView.defaultTime()]
     
-    // NEW: State to control the settings alert.
     @State private var showSettingsAlert = false
 
     init(viewModel: SpecialDaysListViewModel, initialCategory: SpecialDayCategory?, showingPremiumSheet: Binding<Bool>) {
@@ -70,7 +69,7 @@ struct AddSpecialDayView: View {
                     eventDate: $date,
                     isAllDay: $isAllDay,
                     viewModel: viewModel,
-                    showSettingsAlert: $showSettingsAlert // Pass the binding down
+                    showSettingsAlert: $showSettingsAlert
                 )
             }
             .navigationTitle("Add Special Day")
@@ -107,7 +106,6 @@ struct AddSpecialDayView: View {
                     .disabled(isSaveButtonDisabled)
                 }
             }
-            // Add the alert modifier to this view as well.
             .alert("Enable Notifications", isPresented: $showSettingsAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Open Settings") {
@@ -172,10 +170,6 @@ private struct AddReminderSettingsSection: View {
     
     var viewModel: SpecialDaysListViewModel
     @Binding var showSettingsAlert: Bool
-
-    private var reminderTimeRange: PartialRangeThrough<Date> {
-        return ...eventDate
-    }
     
     var body: some View {
         Section(header: Text("Reminder")) {
@@ -192,7 +186,9 @@ private struct AddReminderSettingsSection: View {
                 }
             
             if reminderEnabled {
+                // UPDATED: Picker now includes an option for the day of the event.
                 Picker("Start Reminders", selection: $reminderDaysBefore) {
+                    Text("On the day of the event").tag(0)
                     ForEach(1...7, id: \.self) { day in
                         Text("\(day) day\(day > 1 ? "s" : "") before").tag(day)
                     }
@@ -213,8 +209,17 @@ private struct AddReminderSettingsSection: View {
                 }
                 
                 ForEach(reminderTimes.indices, id: \.self) { index in
+                    // UPDATED: The DatePicker now has a dynamic range to prevent setting
+                    // a reminder time after the event's time.
                     if !isAllDay {
-                        DatePicker("Time \(index + 1)", selection: $reminderTimes[index], in: reminderTimeRange, displayedComponents: .hourAndMinute)
+                        let calendar = Calendar.current
+                        let eventTimeComponents = calendar.dateComponents([.hour, .minute], from: eventDate)
+                        let genericDay = Date()
+                        let endOfRange = calendar.date(bySettingHour: eventTimeComponents.hour ?? 23, minute: eventTimeComponents.minute ?? 59, second: 0, of: genericDay) ?? genericDay
+                        let startOfRange = calendar.startOfDay(for: genericDay)
+                        let timeRange = startOfRange...endOfRange
+                        
+                        DatePicker("Time \(index + 1)", selection: $reminderTimes[index], in: timeRange, displayedComponents: .hourAndMinute)
                     } else {
                         DatePicker("Time \(index + 1)", selection: $reminderTimes[index], displayedComponents: .hourAndMinute)
                     }

@@ -95,7 +95,9 @@ struct EditSpecialDayView: View {
                     }
                 
                 if reminderEnabled {
+                    // UPDATED: Picker now includes an option for the day of the event.
                     Picker("Start Reminders", selection: $specialDay.reminderDaysBefore) {
+                        Text("On the day of the event").tag(0)
                         ForEach(1...7, id: \.self) { day in
                             Text("\(day) day\(day > 1 ? "s" : "") before").tag(day)
                         }
@@ -116,9 +118,17 @@ struct EditSpecialDayView: View {
                     }
                     
                     ForEach(reminderTimes.indices, id: \.self) { index in
+                        // UPDATED: The DatePicker now has a dynamic range to prevent setting
+                        // a reminder time after the event's time.
                         if !isAllDay {
-                            let reminderTimeRange: PartialRangeThrough<Date> = ...specialDay.date
-                            DatePicker("Time \(index + 1)", selection: $reminderTimes[index], in: reminderTimeRange, displayedComponents: .hourAndMinute)
+                            let calendar = Calendar.current
+                            let eventTimeComponents = calendar.dateComponents([.hour, .minute], from: specialDay.date)
+                            let genericDay = Date()
+                            let endOfRange = calendar.date(bySettingHour: eventTimeComponents.hour ?? 23, minute: eventTimeComponents.minute ?? 59, second: 0, of: genericDay) ?? genericDay
+                            let startOfRange = calendar.startOfDay(for: genericDay)
+                            let timeRange = startOfRange...endOfRange
+                            
+                            DatePicker("Time \(index + 1)", selection: $reminderTimes[index], in: timeRange, displayedComponents: .hourAndMinute)
                         } else {
                             DatePicker("Time \(index + 1)", selection: $reminderTimes[index], displayedComponents: .hourAndMinute)
                         }

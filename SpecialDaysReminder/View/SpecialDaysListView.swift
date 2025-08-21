@@ -54,8 +54,6 @@ struct SpecialDaysListView: View {
             ZStack {
                 contentView
                 
-                // The old .alert has been removed and replaced with this ZStack
-                // overlay that presents our new custom view.
                 if showingLapsedSubscriptionAlert {
                     LapsedSubscriptionView(
                         onReturnToFree: {
@@ -107,10 +105,14 @@ struct SpecialDaysListView: View {
                 AddSpecialDayView(viewModel: viewModel, initialCategory: selectedCategoryForAdd, showingPremiumSheet: $showingPremiumSheet)
             }
             .sheet(isPresented: $showingPremiumSheet, onDismiss: {
-                if !iapManager.isPremiumUser {
-                    showingLapsedSubscriptionAlert = true
-                } else {
+                // UPDATED: This logic is now smarter. It only re-shows the alert
+                // if the user was originally sent here because their subscription lapsed.
+                if iapManager.isPremiumUser {
+                    // If they bought premium, reset the lapsed flag.
                     iapManager.subscriptionLapsed = false
+                } else if iapManager.subscriptionLapsed {
+                    // If they didn't buy AND their sub had lapsed, re-show the alert.
+                    showingLapsedSubscriptionAlert = true
                 }
             }) {
                 PremiumFeaturesView()
@@ -145,7 +147,6 @@ struct SpecialDaysListView: View {
                 withAnimation(.easeOut(duration: 0.5).delay(0.1)) { allDaysCardOpacity = 1; allDaysCardOffset = 0 }
                 withAnimation(.easeOut(duration: 0.5).delay(0.2)) { categoryGridOpacity = 1; categoryGridOffset = 0 }
                 
-                // UPDATED: Add a check here to catch free users who are over the limit on app launch.
                 let categoryLimit = 1
                 let eventLimit = 3
                 if !viewModel.isPremiumUser && (viewModel.categories.count > categoryLimit || viewModel.specialDays.count > eventLimit) {

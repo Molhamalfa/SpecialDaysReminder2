@@ -27,7 +27,6 @@ class ReminderManager {
                     }
                 case .denied:
                     completion(false)
-                // FIXED: Added @unknown default to make the switch exhaustive.
                 @unknown default:
                     completion(false)
                 }
@@ -37,6 +36,7 @@ class ReminderManager {
 
     // MARK: - Scheduling Multiple Reminders
 
+    // UPDATED: The scheduling logic is now more robust and correctly includes the event day.
     func scheduleReminder(for day: SpecialDayModel) {
         cancelReminder(for: day)
 
@@ -47,35 +47,23 @@ class ReminderManager {
 
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        let eventDay = calendar.startOfDay(for: day.nextOccurrenceDate)
+        let eventDate = calendar.startOfDay(for: day.nextOccurrenceDate)
 
-        guard let daysUntil = calendar.dateComponents([.day], from: today, to: eventDay).day else {
-            print("Could not calculate days until event.")
-            return
-        }
-
-        guard daysUntil <= day.reminderDaysBefore else {
-            print("Event '\(day.name)' is \(daysUntil) days away. Reminders start \(day.reminderDaysBefore) days before. No reminders scheduled yet.")
-            return
-        }
-        
-        guard daysUntil > 0 else {
-            print("Event '\(day.name)' is today or has passed. No 'days before' reminders will be scheduled.")
-            return
-        }
-
-        for dayIndex in 0..<daysUntil {
+        // Loop backwards from the event day for the number of days the user selected.
+        for dayOffset in 0...day.reminderDaysBefore {
+            guard let notificationDate = calendar.date(byAdding: .day, value: -dayOffset, to: eventDate) else { continue }
             
-            guard let notificationFireDate = calendar.date(byAdding: .day, value: dayIndex, to: today) else { continue }
+            // Only schedule reminders for today or future dates.
+            guard notificationDate >= today else { continue }
 
-            let daysRemainingOnFireDate = daysUntil - dayIndex
+            let daysRemaining = calendar.dateComponents([.day], from: notificationDate, to: eventDate).day ?? 0
 
             for (timeIndex, reminderTime) in day.reminderTimes.enumerated() {
-                
-                var dateComponents = calendar.dateComponents([.year, .month, .day], from: notificationFireDate)
+                var dateComponents = calendar.dateComponents([.year, .month, .day], from: notificationDate)
                 dateComponents.hour = calendar.component(.hour, from: reminderTime)
                 dateComponents.minute = calendar.component(.minute, from: reminderTime)
 
+                // This check ensures we don't schedule a reminder for a time that has already passed today.
                 guard let triggerDate = calendar.date(from: dateComponents), triggerDate > Date() else {
                     continue
                 }
@@ -83,14 +71,16 @@ class ReminderManager {
                 let content = UNMutableNotificationContent()
                 content.title = "Reminder: \(day.name)"
                 
-                if daysRemainingOnFireDate == 1 {
+                if daysRemaining == 0 {
+                    content.body = "Don't forget! \(day.forWhom)'s \(day.name) is today."
+                } else if daysRemaining == 1 {
                     content.body = "Don't forget! \(day.forWhom)'s \(day.name) is tomorrow."
                 } else {
-                    content.body = "Don't forget! \(day.forWhom)'s \(day.name) is in \(daysRemainingOnFireDate) days."
+                    content.body = "Don't forget! \(day.forWhom)'s \(day.name) is in \(daysRemaining) days."
                 }
                 content.sound = .default
 
-                let notificationIdentifier = "\(day.id.recordName)-\(dayIndex)-\(timeIndex)"
+                let notificationIdentifier = "\(day.id.recordName)-\(dayOffset)-\(timeIndex)"
 
                 let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: false)
                 let request = UNNotificationRequest(identifier: notificationIdentifier, content: content, trigger: trigger)

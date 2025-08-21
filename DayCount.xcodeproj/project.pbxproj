@@ -37,7 +37,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		04470EE52E37CC7100A4CFB6 /* SpecialDaysReminder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SpecialDaysReminder.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		04470EE52E37CC7100A4CFB6 /* DayCount.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DayCount.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		046158EB2E37DCBD00E2036D /* SpecialDaysWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SpecialDaysWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		046158ED2E37DCBD00E2036D /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		046158EF2E37DCBD00E2036D /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -59,12 +59,12 @@
 			);
 			target = 046158EA2E37DCBD00E2036D /* SpecialDaysWidgetExtension */;
 		};
-		04F06F992E4FC85B00058739 /* Exceptions for "SpecialDaysReminder" folder in "SpecialDaysReminder" target */ = {
+		04F06F992E4FC85B00058739 /* Exceptions for "SpecialDaysReminder" folder in "DayCount" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 04470EE42E37CC7100A4CFB6 /* SpecialDaysReminder */;
+			target = 04470EE42E37CC7100A4CFB6 /* DayCount */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -72,7 +72,7 @@
 		04470EE72E37CC7100A4CFB6 /* SpecialDaysReminder */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				04F06F992E4FC85B00058739 /* Exceptions for "SpecialDaysReminder" folder in "SpecialDaysReminder" target */,
+				04F06F992E4FC85B00058739 /* Exceptions for "SpecialDaysReminder" folder in "DayCount" target */,
 				046159092E37E26700E2036D /* Exceptions for "SpecialDaysReminder" folder in "SpecialDaysWidgetExtension" target */,
 			);
 			path = SpecialDaysReminder;
@@ -122,7 +122,7 @@
 		04470EE62E37CC7100A4CFB6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				04470EE52E37CC7100A4CFB6 /* SpecialDaysReminder.app */,
+				04470EE52E37CC7100A4CFB6 /* DayCount.app */,
 				046158EB2E37DCBD00E2036D /* SpecialDaysWidgetExtension.appex */,
 			);
 			name = Products;
@@ -140,9 +140,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		04470EE42E37CC7100A4CFB6 /* SpecialDaysReminder */ = {
+		04470EE42E37CC7100A4CFB6 /* DayCount */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 04470EF02E37CC7200A4CFB6 /* Build configuration list for PBXNativeTarget "SpecialDaysReminder" */;
+			buildConfigurationList = 04470EF02E37CC7200A4CFB6 /* Build configuration list for PBXNativeTarget "DayCount" */;
 			buildPhases = (
 				04470EE12E37CC7100A4CFB6 /* Sources */,
 				04470EE22E37CC7100A4CFB6 /* Frameworks */,
@@ -157,11 +157,11 @@
 			fileSystemSynchronizedGroups = (
 				04470EE72E37CC7100A4CFB6 /* SpecialDaysReminder */,
 			);
-			name = SpecialDaysReminder;
+			name = DayCount;
 			packageProductDependencies = (
 			);
 			productName = SpecialDaysReminder;
-			productReference = 04470EE52E37CC7100A4CFB6 /* SpecialDaysReminder.app */;
+			productReference = 04470EE52E37CC7100A4CFB6 /* DayCount.app */;
 			productType = "com.apple.product-type.application";
 		};
 		046158EA2E37DCBD00E2036D /* SpecialDaysWidgetExtension */ = {
@@ -204,7 +204,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 04470EE02E37CC7100A4CFB6 /* Build configuration list for PBXProject "SpecialDaysReminder" */;
+			buildConfigurationList = 04470EE02E37CC7100A4CFB6 /* Build configuration list for PBXProject "DayCount" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -218,7 +218,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				04470EE42E37CC7100A4CFB6 /* SpecialDaysReminder */,
+				04470EE42E37CC7100A4CFB6 /* DayCount */,
 				046158EA2E37DCBD00E2036D /* SpecialDaysWidgetExtension */,
 			);
 		};
@@ -511,7 +511,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		04470EE02E37CC7100A4CFB6 /* Build configuration list for PBXProject "SpecialDaysReminder" */ = {
+		04470EE02E37CC7100A4CFB6 /* Build configuration list for PBXProject "DayCount" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				04470EEE2E37CC7200A4CFB6 /* Debug */,
@@ -520,7 +520,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		04470EF02E37CC7200A4CFB6 /* Build configuration list for PBXNativeTarget "SpecialDaysReminder" */ = {
+		04470EF02E37CC7200A4CFB6 /* Build configuration list for PBXNativeTarget "DayCount" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				04470EF12E37CC7200A4CFB6 /* Debug */,
