@@ -73,9 +73,15 @@ struct CategoryDetailView: View {
                         Label("Delete", systemImage: "trash.fill")
                     }
                     
-                    // UPDATED: Use ShareLink for a direct, clean sharing action
+                    // UPDATED: Use ShareLink with a custom preview including the app icon
                     if let url = specialDaysListViewModel.generateShareableURL(for: day) {
-                        ShareLink(item: url) {
+                        ShareLink(
+                            item: url,
+                            preview: SharePreview(
+                                "Share Event: \(day.name)",
+                                image: Image("DayCountLogo")
+                            )
+                        ) {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
                         .tint(.blue)
