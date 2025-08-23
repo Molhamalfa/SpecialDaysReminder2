@@ -8,21 +8,37 @@
 import SwiftUI
 import StoreKit
 
+// ADDED: An extension to format the subscription period
+extension Product.SubscriptionPeriod {
+    var localizedDescription: String {
+        let unitString: String
+        switch self.unit {
+        case .day:
+            unitString = self.value == 1 ? "day" : "days"
+        case .week:
+            unitString = self.value == 1 ? "week" : "weeks"
+        case .month:
+            unitString = self.value == 1 ? "month" : "months"
+        case .year:
+            unitString = self.value == 1 ? "year" : "years"
+        @unknown default:
+            return ""
+        }
+        return "\(self.value) \(unitString)"
+    }
+}
+
 struct PremiumFeaturesView: View {
     @EnvironmentObject var storeManager: StoreManager
     @Environment(\.dismiss) var dismiss
     
     @State private var selectedProductId: String = ""
     
-    // Animation states for the new UI
     @State private var shakeDegrees = 0.0
     @State private var shakeZoom = 0.9
     
-    // REMOVED: The 'isDismissable' property is no longer needed.
-    
     var body: some View {
         ZStack (alignment: .top) {
-            // UPDATED: The dismiss button is now always visible.
             HStack {
                 Spacer()
                 Button(action: { dismiss() }) {
@@ -36,7 +52,6 @@ struct PremiumFeaturesView: View {
             .padding()
 
             VStack (spacing: 20) {
-                // Hero Image with animation
                 Image("purchaseview-hero")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -45,7 +60,6 @@ struct PremiumFeaturesView: View {
                     .rotationEffect(.degrees(shakeDegrees))
                     .onAppear(perform: startShaking)
                 
-                // Feature List
                 VStack (spacing: 10) {
                     Text("Unlock Premium Access")
                         .font(.system(size: 30, weight: .semibold))
@@ -61,7 +75,6 @@ struct PremiumFeaturesView: View {
                 
                 Spacer()
                 
-                // Subscription Options
                 VStack (spacing: 10) {
                     if storeManager.products.isEmpty {
                         ProgressView("Loading Offers...")
@@ -74,7 +87,6 @@ struct PremiumFeaturesView: View {
                 
                 Spacer()
                 
-                // Purchase and Restore Buttons
                 VStack {
                     if let selectedProduct = storeManager.products.first(where: { $0.id == selectedProductId }) {
                         PurchaseButton(product: selectedProduct)
@@ -169,15 +181,10 @@ private struct SubscriptionOptionButton: View {
                     Text(product.displayName)
                         .font(.headline.bold())
                     
-                    if let introOffer = product.subscription?.introductoryOffer, introOffer.paymentMode == .freeTrial {
-                        Text("Starts with a \(introOffer.period.value)-day free trial, then \(product.displayPrice) per year")
-                            .font(.caption)
-                            .opacity(0.8)
-                    } else {
-                        Text("\(product.displayPrice) per year")
-                            .font(.caption)
-                            .opacity(0.8)
-                    }
+                    // UPDATED: Use a ViewBuilder to create the price display
+                    priceDescriptionView
+                        .font(.caption)
+                        .opacity(0.8)
                 }
                 Spacer()
                 
@@ -194,6 +201,28 @@ private struct SubscriptionOptionButton: View {
             )
         }
         .accentColor(.primary)
+    }
+    
+    // UPDATED: This is now a ViewBuilder property
+    @ViewBuilder
+    private var priceDescriptionView: some View {
+        if let subscription = product.subscription,
+           let introOffer = subscription.introductoryOffer,
+           introOffer.paymentMode == .payUpFront {
+            
+            HStack(spacing: 4) {
+                Text(product.displayPrice)
+                    .strikethrough()
+                Text("\(introOffer.displayPrice) for the first \(introOffer.period.localizedDescription)")
+            }
+            
+        } else if let subscription = product.subscription,
+                  let introOffer = subscription.introductoryOffer,
+                  introOffer.paymentMode == .freeTrial {
+            Text("Starts with a \(introOffer.period.value)-day free trial, then \(product.displayPrice) per year.")
+        } else {
+            Text("\(product.displayPrice) per year")
+        }
     }
 }
 
