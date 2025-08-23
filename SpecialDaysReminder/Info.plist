@@ -2,7 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSUbiquitousIdentityToken</key>
-	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+    <key>NSUbiquitousIdentityToken</key>
+    <string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>specialdaysreminder</string>
+            </array>
+            <key>CFBundleURLName</key>
+            <string>com.molham.SpecialDaysReminder.Share</string>
+        </dict>
+    </array>
 </dict>
 </plist>

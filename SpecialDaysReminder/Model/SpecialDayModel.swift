@@ -41,8 +41,7 @@ extension Color {
     }
 }
 
-// FIXED: Added @unchecked Sendable conformance to resolve capture errors.
-public struct SpecialDayCategory: Identifiable, Hashable, @unchecked Sendable {
+public struct SpecialDayCategory: Identifiable, Hashable, Sendable {
     private(set) var record: CKRecord
     var isShared: Bool
     
@@ -80,6 +79,15 @@ public struct SpecialDayCategory: Identifiable, Hashable, @unchecked Sendable {
         self.icon = icon
     }
     
+    // ADD THIS NEW INITIALIZER
+    init(recordID: CKRecord.ID, name: String, color: Color, icon: String, isShared: Bool) {
+        self.record = CKRecord(recordType: "Category", recordID: recordID)
+        self.isShared = isShared
+        self.name = name
+        self.color = color
+        self.icon = icon
+    }
+    
     init?(record: CKRecord, isShared: Bool = false) {
         guard record.recordType == "Category" else { return nil }
         self.record = record
@@ -95,9 +103,9 @@ public struct SpecialDayCategory: Identifiable, Hashable, @unchecked Sendable {
     }
 }
 
-// FIXED: Added @unchecked Sendable conformance to resolve capture errors.
-public struct SpecialDayModel: Identifiable, @unchecked Sendable {
+public struct SpecialDayModel: Identifiable, Sendable {
     private(set) var record: CKRecord
+    var isShared: Bool
     
     public var id: CKRecord.ID { record.recordID }
 
@@ -164,6 +172,7 @@ public struct SpecialDayModel: Identifiable, @unchecked Sendable {
 
     init(name: String, date: Date, forWhom: String, category: SpecialDayCategory?, notes: String? = nil, recurrence: RecurrenceType = .yearly, isAllDay: Bool = true, reminderEnabled: Bool = false, reminderDaysBefore: Int = 1, reminderFrequency: Int = 1, reminderTimes: [Date] = []) {
         self.record = CKRecord(recordType: "SpecialDay")
+        self.isShared = false
         self.name = name
         self.date = date
         self.forWhom = forWhom
@@ -179,9 +188,10 @@ public struct SpecialDayModel: Identifiable, @unchecked Sendable {
         self.reminderTimes = reminderTimes
     }
     
-    init?(record: CKRecord) {
+    init?(record: CKRecord, isShared: Bool = false) {
         guard record.recordType == "SpecialDay" else { return nil }
         self.record = record
+        self.isShared = isShared
     }
 
     public var nextOccurrenceDate: Date {

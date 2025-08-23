@@ -106,7 +106,6 @@ class SpecialDaysListViewModel: ObservableObject {
             }
         case .noAccount, .restricted, .couldNotDetermine:
             self.cloudKitState = .error(CloudKitError.iCloudAccountNotFound)
-        // FIXED: This @unknown default case makes the switch exhaustive.
         @unknown default:
             self.cloudKitState = .error(CloudKitError.iCloudAccountUnknown)
         }
@@ -121,15 +120,42 @@ class SpecialDaysListViewModel: ObservableObject {
         
         Task {
             do {
-                let categoryQuery = CKQuery(recordType: CloudKitRecordType.category.rawValue, predicate: NSPredicate(value: true))
-                let (categoryMatchResults, _) = try await CloudKitManager.shared.privateDatabase.records(matching: categoryQuery)
-                let categoryRecords = try categoryMatchResults.map { try $0.1.get() }
-                let fetchedCategories = categoryRecords.compactMap { SpecialDayCategory(record: $0) }
+                // Fetch from Private Database
+                let privateCategoryQuery = CKQuery(recordType: CloudKitRecordType.category.rawValue, predicate: NSPredicate(value: true))
+                let (privateCategoryResults, _) = try await CloudKitManager.shared.privateDatabase.records(matching: privateCategoryQuery)
+                let privateCategoryRecords = try privateCategoryResults.map { try $0.1.get() }
+                var fetchedCategories = privateCategoryRecords.compactMap { SpecialDayCategory(record: $0, isShared: false) }
                 
-                let specialDayQuery = CKQuery(recordType: CloudKitRecordType.specialDay.rawValue, predicate: NSPredicate(value: true))
-                let (specialDayMatchResults, _) = try await CloudKitManager.shared.privateDatabase.records(matching: specialDayQuery)
-                let specialDayRecords = try specialDayMatchResults.map { try $0.1.get() }
-                let fetchedSpecialDays = specialDayRecords.compactMap(SpecialDayModel.init)
+                let privateDayQuery = CKQuery(recordType: CloudKitRecordType.specialDay.rawValue, predicate: NSPredicate(value: true))
+                let (privateDayResults, _) = try await CloudKitManager.shared.privateDatabase.records(matching: privateDayQuery)
+                let privateDayRecords = try privateDayResults.map { try $0.1.get() }
+                var fetchedSpecialDays = privateDayRecords.compactMap { SpecialDayModel(record: $0, isShared: false) }
+
+                // Fetch from Shared Database
+                var sharedSpecialDays: [SpecialDayModel] = []
+                let sharedZones = try await CloudKitManager.shared.sharedDatabase.allRecordZones()
+                
+                for zone in sharedZones {
+                    let sharedDayQuery = CKQuery(recordType: CloudKitRecordType.specialDay.rawValue, predicate: NSPredicate(value: true))
+                    let (sharedDayResults, _) = try await CloudKitManager.shared.sharedDatabase.records(matching: sharedDayQuery, inZoneWith: zone.zoneID)
+                    let sharedDayRecords = try sharedDayResults.map { try $0.1.get() }
+                    sharedSpecialDays.append(contentsOf: sharedDayRecords.compactMap { SpecialDayModel(record: $0, isShared: true) })
+                }
+                
+                if !sharedSpecialDays.isEmpty {
+                    let sharedCategoryID = CKRecord.ID(recordName: "sharedWithYouCategory")
+                    let sharedCategory = SpecialDayCategory(recordID: sharedCategoryID, name: "Shared with You", color: .gray, icon: "person.2.fill", isShared: true)
+                    
+                    if !fetchedCategories.contains(where: { $0.id == sharedCategoryID }) {
+                        fetchedCategories.append(sharedCategory)
+                    }
+                    
+                    for day in sharedSpecialDays {
+                        var mutableDay = day
+                        mutableDay.categoryReference = CKRecord.Reference(recordID: sharedCategoryID, action: .none)
+                        fetchedSpecialDays.append(mutableDay)
+                    }
+                }
                 
                 await MainActor.run {
                     self.categories = fetchedCategories
@@ -341,7 +367,6 @@ class SpecialDaysListViewModel: ObservableObject {
         reminderManager.requestNotificationAuthorization(completion: completion)
     }
     
-    // NEW: Functions to handle review requests.
     private func requestReviewForFirstCategory() {
         guard let userDefaults = sharedUserDefaults else { return }
         if !userDefaults.bool(forKey: hasShownReviewPromptForCategoryKey) {
@@ -358,66 +383,53 @@ class SpecialDaysListViewModel: ObservableObject {
         }
     }
 
-    // FIXED: Updated to use the modern, non-deprecated review request API.
     private func requestReview() {
         if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-            // This is the modern, non-async, non-throwing version of the API.
             AppStore.requestReview(in: scene)
         }
     }
     
-    // MARK: - ICS File Generation
+    // UPDATED: This function is now for generating a shareable URL
+    func generateShareableURL(for day: SpecialDayModel) -> URL? {
+        var components = URLComponents()
+        components.scheme = "specialdaysreminder"
+        components.host = "share"
+        
+        let eventCategory = category(for: day)
+        
+        // Use ISO8601 format for robust date parsing
+        let dateFormatter = ISO8601DateFormatter()
+        
+        var queryItems = [
+            URLQueryItem(name: "name", value: day.name),
+            URLQueryItem(name: "date", value: dateFormatter.string(from: day.date)),
+            URLQueryItem(name: "forWhom", value: day.forWhom)
+        ]
+        
+        if let icon = eventCategory?.icon {
+            queryItems.append(URLQueryItem(name: "icon", value: icon))
+        }
+        
+        if let colorHex = eventCategory?.colorHex {
+            queryItems.append(URLQueryItem(name: "colorHex", value: colorHex))
+        }
+        
+        components.queryItems = queryItems
+        
+        return components.url
+    }
     
-    func generateICSFile(for day: SpecialDayModel) -> URL? {
-        let calendar = Calendar.current
-        let startDate = day.date
-        let endDate = day.isAllDay ? calendar.date(byAdding: .day, value: 1, to: startDate) : calendar.date(byAdding: .hour, value: 1, to: startDate)
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
-        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-
-        let startDateString = dateFormatter.string(from: startDate)
-        let endDateString = dateFormatter.string(from: endDate ?? startDate)
-
-        var icsString = "BEGIN:VCALENDAR\n"
-        icsString += "VERSION:2.0\n"
-        icsString += "PRODID:-//SpecialDaysReminder//EN\n"
-        icsString += "BEGIN:VEVENT\n"
-        icsString += "UID:\(UUID().uuidString)\n"
-        icsString += "DTSTAMP:\(startDateString)\n"
-        icsString += "DTSTART:\(startDateString)\n"
-        icsString += "DTEND:\(endDateString)\n"
-        icsString += "SUMMARY:\(day.name)\n"
-        if let notes = day.notes, !notes.isEmpty {
-            icsString += "DESCRIPTION:\(notes)\n"
-        }
-        
-        // Add recurrence rule if needed
-        switch day.recurrence {
-        case .weekly:
-            icsString += "RRULE:FREQ=WEEKLY\n"
-        case .monthly:
-            icsString += "RRULE:FREQ=MONTHLY\n"
-        case .yearly:
-            icsString += "RRULE:FREQ=YEARLY\n"
-        case .oneTime:
-            break
-        }
-        
-        icsString += "END:VEVENT\n"
-        icsString += "END:VCALENDAR"
-
-        let fileManager = FileManager.default
-        let tempDirectoryURL = fileManager.temporaryDirectory
-        let fileURL = tempDirectoryURL.appendingPathComponent("\(day.name).ics")
-
-        do {
-            try icsString.write(to: fileURL, atomically: true, encoding: .utf8)
-            return fileURL
-        } catch {
-            print("Failed to write ICS file: \(error)")
-            return nil
+    // MARK: - CloudKit Sharing
+    
+    func acceptShare(metadata: CKShare.Metadata) {
+        Task {
+            do {
+                try await CloudKitManager.shared.acceptShare(metadata: metadata)
+                self.fetchCategoriesAndSpecialDays()
+            } catch {
+                print("Failed to accept share: \(error)")
+                self.cloudKitState = .error(error)
+            }
         }
     }
     

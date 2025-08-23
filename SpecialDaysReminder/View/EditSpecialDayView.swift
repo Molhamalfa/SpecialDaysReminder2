@@ -49,7 +49,7 @@ struct EditSpecialDayView: View {
         Form {
             formContent
         }
-        .navigationTitle("Edit Special Day")
+        .navigationTitle(specialDay.isShared ? "Shared Event" : "Edit Special Day")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -77,13 +77,9 @@ struct EditSpecialDayView: View {
         // MARK: - Event Details Section
         Section(header: Text("Event Details")) {
             TextField("Event Name", text: $specialDay.name)
-            
             DatePicker("Date", selection: $specialDay.date, displayedComponents: isAllDay ? .date : [.date, .hourAndMinute])
-
             Toggle("All-Day Event", isOn: $isAllDay.animation())
-
             TextField("For Whom", text: $specialDay.forWhom)
-            
             Picker("Category", selection: $specialDay.categoryReference) {
                 Text("Uncategorized").tag(nil as CKRecord.Reference?)
                 ForEach(viewModel.categories) { cat in
@@ -95,16 +91,16 @@ struct EditSpecialDayView: View {
                 }
             }
             .pickerStyle(.menu)
-
             Picker("Repeats", selection: $specialDay.recurrence) {
                 ForEach(RecurrenceType.allCases, id: \.self) { type in
                     Text(type.displayName).tag(type)
                 }
             }
             .pickerStyle(.segmented)
-            
             TextField("Notes (Optional)", text: Binding(get: { specialDay.notes ?? "" }, set: { specialDay.notes = $0.isEmpty ? nil : $0 }), axis: .vertical)
         }
+        // ADDED: Disable the entire section if the event is shared
+        .disabled(specialDay.isShared)
         
         // MARK: - Reminder Settings Section
         Section(header: Text("Reminder")) {
@@ -159,6 +155,8 @@ struct EditSpecialDayView: View {
                 }
             }
         }
+        // ADDED: Disable this section as well if the event is shared
+        .disabled(specialDay.isShared)
     }
     
     @ToolbarContentBuilder
@@ -166,8 +164,12 @@ struct EditSpecialDayView: View {
         ToolbarItem(placement: .navigationBarLeading) {
             Button("Cancel") { dismiss() }
         }
-        ToolbarItem(placement: .navigationBarTrailing) {
-            Button("Save", action: saveChanges)
+        
+        // ADDED: Only show the save button for non-shared items
+        if !specialDay.isShared {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save", action: saveChanges)
+            }
         }
     }
     

@@ -8,24 +8,6 @@
 import SwiftUI
 import CloudKit
 
-// ADDED: These structs are now here
-struct IdentifiableURL: Identifiable {
-    let id = UUID()
-    let url: URL
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-
 struct CategoryDetailView: View {
     @StateObject private var categoryDetailViewModel: CategoryDetailViewModel
     @ObservedObject var specialDaysListViewModel: SpecialDaysListViewModel
@@ -39,9 +21,6 @@ struct CategoryDetailView: View {
     
     @State private var showingAddSpecialDaySheet = false
     @Environment(\.dismiss) var dismiss
-    
-    // ADDED: State for the share sheet
-    @State private var shareableURL: IdentifiableURL?
 
     init(viewModel: SpecialDaysListViewModel, category: SpecialDayCategory?, navigationPath: Binding<NavigationPath>, showingPremiumSheet: Binding<Bool>) {
         _specialDaysListViewModel = ObservedObject(wrappedValue: viewModel)
@@ -65,6 +44,21 @@ struct CategoryDetailView: View {
     }
 
     var body: some View {
+        listView
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(adaptiveBackgroundColor.edgesIgnoringSafeArea(.all))
+            .navigationTitle(category?.displayName ?? "All Special Days")
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                toolbarContent
+            }
+            .sheet(isPresented: $showingAddSpecialDaySheet) {
+                AddSpecialDayView(viewModel: specialDaysListViewModel, initialCategory: category, showingPremiumSheet: $showingPremiumSheet)
+            }
+    }
+    
+    private var listView: some View {
         List {
             ForEach(categoryDetailViewModel.specialDaysForCategory) { day in
                 NavigationLink(value: NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id))) {
@@ -79,50 +73,33 @@ struct CategoryDetailView: View {
                         Label("Delete", systemImage: "trash.fill")
                     }
                     
-                    // ADDED: Share button as a swipe action
-                    Button {
-                        shareEvent(for: day)
-                    } label: {
-                        Label("Share", systemImage: "square.and.arrow.up")
+                    // UPDATED: Use ShareLink for a direct, clean sharing action
+                    if let url = specialDaysListViewModel.generateShareableURL(for: day) {
+                        ShareLink(item: url) {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+                        .tint(.blue)
                     }
-                    .tint(.blue)
                 }
             }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .background(adaptiveBackgroundColor.edgesIgnoringSafeArea(.all))
-        .navigationTitle(category?.displayName ?? "All Special Days")
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(themeColor)
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showingAddSpecialDaySheet = true } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(themeColor)
-                }
-            }
-        }
-        .sheet(isPresented: $showingAddSpecialDaySheet) {
-            AddSpecialDayView(viewModel: specialDaysListViewModel, initialCategory: category, showingPremiumSheet: $showingPremiumSheet)
-        }
-        // ADDED: Sheet modifier for sharing
-        .sheet(item: $shareableURL) { identifiableURL in
-            ShareSheet(activityItems: [identifiableURL.url])
         }
     }
     
-    // ADDED: Share event function
-    private func shareEvent(for day: SpecialDayModel) {
-        if let url = specialDaysListViewModel.generateICSFile(for: day) {
-            shareableURL = IdentifiableURL(url: url)
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(themeColor)
+            }
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button { showingAddSpecialDaySheet = true } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(themeColor)
+            }
         }
     }
 }

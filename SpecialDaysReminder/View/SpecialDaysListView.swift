@@ -13,6 +13,16 @@ struct IdentifiableCKRecordID: Identifiable, Equatable, Hashable {
     let id: CKRecord.ID
 }
 
+// A struct to hold the data from a shared URL
+struct SharedEventInfo: Identifiable {
+    let id = UUID()
+    let name: String
+    let date: Date
+    let forWhom: String
+    let icon: String?
+    let colorHex: String?
+}
+
 enum NavigationDestinationType: Hashable {
     case allSpecialDaysDetail
     case categoryDetail(SpecialDayCategory)
@@ -24,7 +34,7 @@ enum NavigationDestinationType: Hashable {
 struct SpecialDaysListView: View {
     @EnvironmentObject var iapManager: IAPManager
     
-    @StateObject var viewModel: SpecialDaysListViewModel
+    @ObservedObject var viewModel: SpecialDaysListViewModel
     
     @State private var showingAddSpecialDaySheet: Bool = false
     @State private var showingAddCategorySheet: Bool = false
@@ -37,21 +47,22 @@ struct SpecialDaysListView: View {
     
     @Binding var deepLinkEventID: String?
     @Binding var deepLinkAddEvent: Bool
+    
+    @Binding var sharedEventInfo: SharedEventInfo?
 
     @State private var allDaysCardOpacity: Double = 0
     @State private var allDaysCardOffset: CGFloat = -20
     @State private var categoryGridOpacity: Double = 0
     @State private var categoryGridOffset: CGFloat = -20
 
-    init(iapManager: IAPManager, deepLinkEventID: Binding<String?>, deepLinkAddEvent: Binding<Bool>) {
-        _viewModel = StateObject(wrappedValue: SpecialDaysListViewModel(iapManager: iapManager))
+    init(iapManager: IAPManager, viewModel: SpecialDaysListViewModel, deepLinkEventID: Binding<String?>, deepLinkAddEvent: Binding<Bool>, sharedEventInfo: Binding<SharedEventInfo?>) {
+        _viewModel = ObservedObject(wrappedValue: viewModel)
         _deepLinkEventID = deepLinkEventID
         _deepLinkAddEvent = deepLinkAddEvent
+        _sharedEventInfo = sharedEventInfo
     }
 
     var body: some View {
-        // UPDATED: The body is now simpler. The complex view modifiers have been moved
-        // to separate computed properties to help the compiler.
         navigationStackView
             .applyOnChangeModifiers(
                 viewModel: viewModel,
@@ -67,9 +78,53 @@ struct SpecialDaysListView: View {
                 categoryGridOpacity: $categoryGridOpacity,
                 categoryGridOffset: $categoryGridOffset
             )
+            // REMOVED: The old .onReceive modifier for CloudKit shares is now gone.
+            .sheet(item: $sharedEventInfo) { info in
+                VStack {
+                    Text("Add Shared Event?")
+                        .font(.largeTitle)
+                        .padding()
+                    
+                    if let icon = info.icon {
+                        Text(icon)
+                            .font(.system(size: 80))
+                    }
+                    
+                    Text(info.name)
+                        .font(.title)
+                    Text("For: \(info.forWhom)")
+                        .font(.headline)
+                    Text(info.date, style: .date)
+                        .font(.subheadline)
+                    
+                    Spacer()
+                    
+                    HStack {
+                        Button("Cancel") {
+                            sharedEventInfo = nil
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.systemGray5))
+                        .foregroundColor(.primary)
+                        .cornerRadius(10)
+                        
+                        Button("Add") {
+                            let newDay = SpecialDayModel(name: info.name, date: info.date, forWhom: info.forWhom, category: nil)
+                            viewModel.addSpecialDay(newDay)
+                            sharedEventInfo = nil
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    .padding()
+                }
+            }
     }
     
-    // This new computed property contains the main navigation stack and its direct modifiers.
     private var navigationStackView: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
@@ -107,7 +162,6 @@ struct SpecialDaysListView: View {
         }
     }
     
-    // The main content of the screen.
     @ViewBuilder
     private var contentView: some View {
         ZStack {
@@ -139,7 +193,6 @@ struct SpecialDaysListView: View {
         }
     }
     
-    // The content for the toolbar.
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if case .loaded = viewModel.cloudKitState {
@@ -170,7 +223,6 @@ struct SpecialDaysListView: View {
         }
     }
     
-    // A helper to build the navigation destination views.
     @ViewBuilder
     private func navigationDestinationView(for destination: NavigationDestinationType) -> some View {
         switch destination {
@@ -191,7 +243,6 @@ struct SpecialDaysListView: View {
         }
     }
     
-    // A helper to build the error view.
     @ViewBuilder
     private func errorView(_ error: Error) -> some View {
         VStack(spacing: 15) {
@@ -212,7 +263,6 @@ struct SpecialDaysListView: View {
     }
 }
 
-// This new View extension groups the sheet modifiers together.
 fileprivate extension View {
     @ViewBuilder
     func applySheetModifiers(
@@ -241,7 +291,6 @@ fileprivate extension View {
     }
 }
 
-// This new View extension groups the onChange modifiers together.
 fileprivate extension View {
     @ViewBuilder
     func applyOnChangeModifiers(
@@ -314,8 +363,6 @@ fileprivate extension View {
     }
 }
 
-
-// Equatable conformance for CloudKitState to be used in onChange.
 extension CloudKitState: Equatable {
     public static func == (lhs: CloudKitState, rhs: CloudKitState) -> Bool {
         switch (lhs, rhs) {
