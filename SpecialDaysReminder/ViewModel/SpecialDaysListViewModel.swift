@@ -39,6 +39,20 @@ struct WidgetSpecialDay: Codable, Hashable, Identifiable {
     let categoryID: String?
 }
 
+// ADDED: Models for encoding/decoding shared category data
+struct SharedCategoryPayload: Codable {
+    let name: String
+    let colorHex: String
+    let icon: String
+    let events: [SharedEventPayload]
+}
+
+struct SharedEventPayload: Codable {
+    let name: String
+    let date: Date
+    let forWhom: String
+}
+
 
 @MainActor
 class SpecialDaysListViewModel: ObservableObject {
@@ -417,6 +431,52 @@ class SpecialDaysListViewModel: ObservableObject {
         components.queryItems = queryItems
         
         return components.url
+    }
+    
+    // ADDED: New function to generate a shareable URL for a category
+    func generateShareableURL(for category: SpecialDayCategory, completion: @escaping (URL?) -> Void) {
+        let eventsForCategory = specialDays(for: category)
+        let eventPayloads = eventsForCategory.map {
+            SharedEventPayload(name: $0.name, date: $0.date, forWhom: $0.forWhom)
+        }
+        
+        let payload = SharedCategoryPayload(
+            name: category.name,
+            colorHex: category.colorHex,
+            icon: category.icon,
+            events: eventPayloads
+        )
+        
+        do {
+            let jsonData = try JSONEncoder().encode(payload)
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                var components = URLComponents()
+                components.scheme = "specialdaysreminder"
+                components.host = "shareCategory"
+                components.queryItems = [URLQueryItem(name: "data", value: jsonString)]
+                completion(components.url)
+            } else {
+                completion(nil)
+            }
+        } catch {
+            print("Error encoding category for sharing: \(error)")
+            completion(nil)
+        }
+    }
+    
+    // ADDED: Function to trigger the sharing action for a category
+    func shareCategory(category: SpecialDayCategory) {
+        generateShareableURL(for: category) { url in
+            guard let url = url else { return }
+            
+            let activityViewController = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+            
+            // Find the key window scene to present the share sheet
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootViewController = windowScene.windows.first?.rootViewController {
+                rootViewController.present(activityViewController, animated: true, completion: nil)
+            }
+        }
     }
     
     // MARK: - CloudKit Sharing

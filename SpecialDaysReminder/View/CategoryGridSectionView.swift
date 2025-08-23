@@ -13,7 +13,8 @@ struct CategoryGridSectionView: View {
     let categoryGridOffset: CGFloat
     
     let onAddTapped: (SpecialDayCategory) -> Void
-    // REMOVED: The onShareTapped closure has been removed.
+    // ADDED: A closure to handle the share action.
+    let onShareTapped: (SpecialDayCategory) -> Void
     @Binding var navigationPath: NavigationPath
 
     var body: some View {
@@ -26,7 +27,10 @@ struct CategoryGridSectionView: View {
                         onAddTapped: {
                             onAddTapped(category)
                         },
-                        // REMOVED: The onShareTapped parameter is no longer passed.
+                        // UPDATED: Pass the share action for the specific category.
+                        onShareTapped: {
+                            onShareTapped(category)
+                        },
                         onDayTapped: { day in
                             navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id)))
                         }

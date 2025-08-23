@@ -28,6 +28,22 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
+// ADDED: Structs for handling shared category data
+struct SharedCategoryInfo: Identifiable {
+    let id = UUID()
+    let name: String
+    let colorHex: String
+    let icon: String
+    let events: [SharedEvent]
+}
+
+struct SharedEvent: Identifiable {
+    let id = UUID()
+    let name: String
+    let date: Date
+    let forWhom: String
+}
+
 @main
 struct SpecialDaysReminderApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -35,8 +51,10 @@ struct SpecialDaysReminderApp: App {
     @State private var deepLinkEventID: String? = nil
     @State private var deepLinkAddEvent: Bool = false
     
-    // ADDED: State to hold the incoming shared event info
     @State private var sharedEventInfo: SharedEventInfo? = nil
+    
+    // ADDED: State to hold incoming shared category info
+    @State private var sharedCategoryInfo: SharedCategoryInfo? = nil
 
     @StateObject private var storeManager: StoreManager
     @StateObject private var iapManager: IAPManager
@@ -52,17 +70,22 @@ struct SpecialDaysReminderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // UPDATED: Pass the new binding to the list view
-            SpecialDaysListView(iapManager: iapManager, viewModel: viewModel, deepLinkEventID: $deepLinkEventID, deepLinkAddEvent: $deepLinkAddEvent, sharedEventInfo: $sharedEventInfo)
-                .environmentObject(storeManager)
-                .environmentObject(iapManager)
-                .onOpenURL { url in
-                    handleIncomingURL(url)
-                }
+            SpecialDaysListView(
+                iapManager: iapManager,
+                viewModel: viewModel,
+                deepLinkEventID: $deepLinkEventID,
+                deepLinkAddEvent: $deepLinkAddEvent,
+                sharedEventInfo: $sharedEventInfo,
+                sharedCategoryInfo: $sharedCategoryInfo // Pass the new binding
+            )
+            .environmentObject(storeManager)
+            .environmentObject(iapManager)
+            .onOpenURL { url in
+                handleIncomingURL(url)
+            }
         }
     }
     
-    // ADDED: A function to parse the incoming URL
     private func handleIncomingURL(_ url: URL) {
         guard url.scheme == "specialdaysreminder" else { return }
 
@@ -70,6 +93,7 @@ struct SpecialDaysReminderApp: App {
         self.deepLinkEventID = nil
         self.deepLinkAddEvent = false
         self.sharedEventInfo = nil
+        self.sharedCategoryInfo = nil
 
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return }
 
@@ -78,7 +102,6 @@ struct SpecialDaysReminderApp: App {
         } else if url.host == "add" {
             self.deepLinkAddEvent = true
         } else if url.host == "share", let queryItems = components.queryItems {
-            // Parse the event details from the query items
             let name = queryItems.first(where: { $0.name == "name" })?.value ?? "Untitled Event"
             let forWhom = queryItems.first(where: { $0.name == "forWhom" })?.value ?? ""
             let dateString = queryItems.first(where: { $0.name == "date" })?.value ?? ""
@@ -88,8 +111,26 @@ struct SpecialDaysReminderApp: App {
             let dateFormatter = ISO8601DateFormatter()
             let date = dateFormatter.date(from: dateString) ?? Date()
             
-            // Create the info object to trigger the sheet
             self.sharedEventInfo = SharedEventInfo(name: name, date: date, forWhom: forWhom, icon: icon, colorHex: colorHex)
+        } else if url.host == "shareCategory", let queryItems = components.queryItems {
+            // ADDED: Handle the new category sharing URL
+            if let dataString = queryItems.first(where: { $0.name == "data" })?.value,
+               let data = dataString.data(using: .utf8) {
+                do {
+                    let payload = try JSONDecoder().decode(SharedCategoryPayload.self, from: data)
+                    let sharedEvents = payload.events.map {
+                        SharedEvent(name: $0.name, date: $0.date, forWhom: $0.forWhom)
+                    }
+                    self.sharedCategoryInfo = SharedCategoryInfo(
+                        name: payload.name,
+                        colorHex: payload.colorHex,
+                        icon: payload.icon,
+                        events: sharedEvents
+                    )
+                } catch {
+                    print("Error decoding shared category: \(error)")
+                }
+            }
         }
     }
 }

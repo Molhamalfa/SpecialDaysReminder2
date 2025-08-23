@@ -19,7 +19,8 @@ struct SpecialDaysContentView: View {
     @Binding var showingAddCategorySheet: Bool
     @Binding var navigationPath: NavigationPath
     let onAddTapped: (SpecialDayCategory?) -> Void
-    // REMOVED: The onShareTapped closure is no longer needed.
+    // ADDED: A closure to handle the share action.
+    let onShareTapped: (SpecialDayCategory) -> Void
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -32,7 +33,9 @@ struct SpecialDaysContentView: View {
                         navigationPath: $navigationPath,
                         onAddTapped: {
                             onAddTapped(nil)
-                        }
+                        },
+                        // The "All" category cannot be shared, so we provide an empty closure.
+                        onShareTapped: {}
                     )
 
                     CategoryGridSectionView(
@@ -42,7 +45,10 @@ struct SpecialDaysContentView: View {
                         onAddTapped: { category in
                             onAddTapped(category)
                         },
-                        // REMOVED: The onShareTapped closure has been removed.
+                        // UPDATED: Pass the share action down.
+                        onShareTapped: { category in
+                            onShareTapped(category)
+                        },
                         navigationPath: $navigationPath
                     )
                 }

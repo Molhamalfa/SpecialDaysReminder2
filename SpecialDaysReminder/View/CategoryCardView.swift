@@ -12,17 +12,19 @@ struct CategoryCardView: View {
     let specialDays: [SpecialDayModel]
     
     let onAddTapped: () -> Void
-    // REMOVED: The onShareTapped closure has been removed.
+    // ADDED: A closure for the new share action.
+    let onShareTapped: () -> Void
     let onDayTapped: (SpecialDayModel) -> Void
 
     var customTitle: String?
     var customIcon: String?
     
-    // UPDATED: The initializer no longer accepts an onShareTapped closure.
-    init(category: SpecialDayCategory, specialDays: [SpecialDayModel], onAddTapped: @escaping () -> Void, onDayTapped: @escaping (SpecialDayModel) -> Void, customTitle: String? = nil, customIcon: String? = nil) {
+    // UPDATED: The initializer now accepts an onShareTapped closure.
+    init(category: SpecialDayCategory, specialDays: [SpecialDayModel], onAddTapped: @escaping () -> Void, onShareTapped: @escaping () -> Void, onDayTapped: @escaping (SpecialDayModel) -> Void, customTitle: String? = nil, customIcon: String? = nil) {
         self.category = category
         self.specialDays = specialDays
         self.onAddTapped = onAddTapped
+        self.onShareTapped = onShareTapped
         self.onDayTapped = onDayTapped
         self.customTitle = customTitle
         self.customIcon = customIcon
@@ -47,7 +49,15 @@ struct CategoryCardView: View {
 
                 Spacer()
                 
-                // REMOVED: The entire share button block.
+                // ADDED: The share button for the category.
+                Button(action: onShareTapped) {
+                    Image(systemName: "square.and.arrow.up.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .padding(5)
+                        .background(Color.white.opacity(0.2))
+                        .clipShape(Circle())
+                }
                 
                 Button(action: onAddTapped) {
                     Image(systemName: "plus.circle.fill")

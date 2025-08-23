@@ -49,17 +49,21 @@ struct SpecialDaysListView: View {
     @Binding var deepLinkAddEvent: Bool
     
     @Binding var sharedEventInfo: SharedEventInfo?
+    
+    // ADDED: Binding for the shared category info
+    @Binding var sharedCategoryInfo: SharedCategoryInfo?
 
     @State private var allDaysCardOpacity: Double = 0
     @State private var allDaysCardOffset: CGFloat = -20
     @State private var categoryGridOpacity: Double = 0
     @State private var categoryGridOffset: CGFloat = -20
 
-    init(iapManager: IAPManager, viewModel: SpecialDaysListViewModel, deepLinkEventID: Binding<String?>, deepLinkAddEvent: Binding<Bool>, sharedEventInfo: Binding<SharedEventInfo?>) {
+    init(iapManager: IAPManager, viewModel: SpecialDaysListViewModel, deepLinkEventID: Binding<String?>, deepLinkAddEvent: Binding<Bool>, sharedEventInfo: Binding<SharedEventInfo?>, sharedCategoryInfo: Binding<SharedCategoryInfo?>) {
         _viewModel = ObservedObject(wrappedValue: viewModel)
         _deepLinkEventID = deepLinkEventID
         _deepLinkAddEvent = deepLinkAddEvent
         _sharedEventInfo = sharedEventInfo
+        _sharedCategoryInfo = sharedCategoryInfo
     }
 
     var body: some View {
@@ -78,7 +82,6 @@ struct SpecialDaysListView: View {
                 categoryGridOpacity: $categoryGridOpacity,
                 categoryGridOffset: $categoryGridOffset
             )
-            // REMOVED: The old .onReceive modifier for CloudKit shares is now gone.
             .sheet(item: $sharedEventInfo) { info in
                 VStack {
                     Text("Add Shared Event?")
@@ -122,6 +125,10 @@ struct SpecialDaysListView: View {
                     }
                     .padding()
                 }
+            }
+            // ADDED: Sheet to present the shared category
+            .sheet(item: $sharedCategoryInfo) { info in
+                SharedCategoryView(viewModel: viewModel, sharedCategoryInfo: info, dismissAction: { sharedCategoryInfo = nil })
             }
     }
     
@@ -184,6 +191,9 @@ struct SpecialDaysListView: View {
                     onAddTapped: { category in
                         self.selectedCategoryForAdd = category
                         self.showingAddSpecialDaySheet = true
+                    },
+                    onShareTapped: { category in
+                        viewModel.shareCategory(category: category)
                     }
                 )
             
@@ -259,6 +269,68 @@ struct SpecialDaysListView: View {
                 viewModel.fetchCategoriesAndSpecialDays()
             }
             .buttonStyle(.borderedProminent)
+        }
+    }
+}
+
+// ADDED: A new view to display the shared category information
+struct SharedCategoryView: View {
+    @ObservedObject var viewModel: SpecialDaysListViewModel
+    let sharedCategoryInfo: SharedCategoryInfo
+    let dismissAction: () -> Void
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text(sharedCategoryInfo.icon)
+                    .font(.system(size: 80))
+                Text("Add '\(sharedCategoryInfo.name)' Category?")
+                    .font(.largeTitle)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                
+                if !sharedCategoryInfo.events.isEmpty {
+                    List(sharedCategoryInfo.events) { event in
+                        VStack(alignment: .leading) {
+                            Text(event.name).font(.headline)
+                            Text("For: \(event.forWhom)").font(.subheadline)
+                            Text(event.date, style: .date).font(.caption)
+                        }
+                    }
+                } else {
+                    Text("This category has no events.")
+                        .padding()
+                }
+                
+                Spacer()
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel", action: dismissAction)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Add") {
+                        let newCategory = SpecialDayCategory(
+                            name: sharedCategoryInfo.name,
+                            color: Color(hex: sharedCategoryInfo.colorHex) ?? .purple,
+                            icon: sharedCategoryInfo.icon
+                        )
+                        viewModel.addCategory(newCategory)
+                        
+                        for event in sharedCategoryInfo.events {
+                            let newDay = SpecialDayModel(
+                                name: event.name,
+                                date: event.date,
+                                forWhom: event.forWhom,
+                                category: newCategory
+                            )
+                            viewModel.addSpecialDay(newDay)
+                        }
+                        
+                        dismissAction()
+                    }
+                }
+            }
         }
     }
 }
