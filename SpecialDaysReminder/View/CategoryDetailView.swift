@@ -8,6 +8,24 @@
 import SwiftUI
 import CloudKit
 
+// ADDED: These structs are now here
+struct IdentifiableURL: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+
 struct CategoryDetailView: View {
     @StateObject private var categoryDetailViewModel: CategoryDetailViewModel
     @ObservedObject var specialDaysListViewModel: SpecialDaysListViewModel
@@ -21,6 +39,9 @@ struct CategoryDetailView: View {
     
     @State private var showingAddSpecialDaySheet = false
     @Environment(\.dismiss) var dismiss
+    
+    // ADDED: State for the share sheet
+    @State private var shareableURL: IdentifiableURL?
 
     init(viewModel: SpecialDaysListViewModel, category: SpecialDayCategory?, navigationPath: Binding<NavigationPath>, showingPremiumSheet: Binding<Bool>) {
         _specialDaysListViewModel = ObservedObject(wrappedValue: viewModel)
@@ -44,8 +65,6 @@ struct CategoryDetailView: View {
     }
 
     var body: some View {
-        // UPDATED: The ZStack has been removed and the background is now applied
-        // directly to the List for more reliable rendering.
         List {
             ForEach(categoryDetailViewModel.specialDaysForCategory) { day in
                 NavigationLink(value: NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id))) {
@@ -59,6 +78,14 @@ struct CategoryDetailView: View {
                     } label: {
                         Label("Delete", systemImage: "trash.fill")
                     }
+                    
+                    // ADDED: Share button as a swipe action
+                    Button {
+                        shareEvent(for: day)
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                    .tint(.blue)
                 }
             }
         }
@@ -85,6 +112,17 @@ struct CategoryDetailView: View {
         }
         .sheet(isPresented: $showingAddSpecialDaySheet) {
             AddSpecialDayView(viewModel: specialDaysListViewModel, initialCategory: category, showingPremiumSheet: $showingPremiumSheet)
+        }
+        // ADDED: Sheet modifier for sharing
+        .sheet(item: $shareableURL) { identifiableURL in
+            ShareSheet(activityItems: [identifiableURL.url])
+        }
+    }
+    
+    // ADDED: Share event function
+    private func shareEvent(for day: SpecialDayModel) {
+        if let url = specialDaysListViewModel.generateICSFile(for: day) {
+            shareableURL = IdentifiableURL(url: url)
         }
     }
 }

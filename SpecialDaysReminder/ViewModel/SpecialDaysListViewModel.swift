@@ -366,6 +366,61 @@ class SpecialDaysListViewModel: ObservableObject {
         }
     }
     
+    // MARK: - ICS File Generation
+    
+    func generateICSFile(for day: SpecialDayModel) -> URL? {
+        let calendar = Calendar.current
+        let startDate = day.date
+        let endDate = day.isAllDay ? calendar.date(byAdding: .day, value: 1, to: startDate) : calendar.date(byAdding: .hour, value: 1, to: startDate)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+        let startDateString = dateFormatter.string(from: startDate)
+        let endDateString = dateFormatter.string(from: endDate ?? startDate)
+
+        var icsString = "BEGIN:VCALENDAR\n"
+        icsString += "VERSION:2.0\n"
+        icsString += "PRODID:-//SpecialDaysReminder//EN\n"
+        icsString += "BEGIN:VEVENT\n"
+        icsString += "UID:\(UUID().uuidString)\n"
+        icsString += "DTSTAMP:\(startDateString)\n"
+        icsString += "DTSTART:\(startDateString)\n"
+        icsString += "DTEND:\(endDateString)\n"
+        icsString += "SUMMARY:\(day.name)\n"
+        if let notes = day.notes, !notes.isEmpty {
+            icsString += "DESCRIPTION:\(notes)\n"
+        }
+        
+        // Add recurrence rule if needed
+        switch day.recurrence {
+        case .weekly:
+            icsString += "RRULE:FREQ=WEEKLY\n"
+        case .monthly:
+            icsString += "RRULE:FREQ=MONTHLY\n"
+        case .yearly:
+            icsString += "RRULE:FREQ=YEARLY\n"
+        case .oneTime:
+            break
+        }
+        
+        icsString += "END:VEVENT\n"
+        icsString += "END:VCALENDAR"
+
+        let fileManager = FileManager.default
+        let tempDirectoryURL = fileManager.temporaryDirectory
+        let fileURL = tempDirectoryURL.appendingPathComponent("\(day.name).ics")
+
+        do {
+            try icsString.write(to: fileURL, atomically: true, encoding: .utf8)
+            return fileURL
+        } catch {
+            print("Failed to write ICS file: \(error)")
+            return nil
+        }
+    }
+    
     // MARK: - UserDefaults for Simple Config & Widget
     
     private func saveAllDaysCategoryColor() {
