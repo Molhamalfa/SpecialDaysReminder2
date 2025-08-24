@@ -205,6 +205,27 @@ struct SpecialDaysListView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if case .loaded = viewModel.cloudKitState {
+            // ADDED: ToolbarItem for premium status/button.
+            ToolbarItem(placement: .navigationBarLeading) {
+                if viewModel.isPremiumUser {
+                    HStack {
+                        Image(systemName: "checkmark.seal.fill")
+                        Text("Premium")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.purple)
+                } else {
+                    Button(action: {
+                        showingPremiumSheet = true
+                    }) {
+                        Image(systemName: "crown.fill")
+                        Text("Unlock Premium")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.purple)
+                }
+            }
+            
             ToolbarItem(placement: .principal) {
                 Text("Your Special Days")
                     .font(.headline)
@@ -256,7 +277,6 @@ struct SpecialDaysListView: View {
         case .editCategories:
             EditCategoriesView(specialDaysListViewModel: viewModel)
         case .settings:
-            // UPDATED: Pass the view model to the SettingsView.
             SettingsView(specialDaysListViewModel: viewModel)
         }
     }
