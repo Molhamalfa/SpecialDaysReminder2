@@ -14,7 +14,6 @@ struct AllSpecialDaysCardView: View {
     @Binding var navigationPath: NavigationPath
     
     let onAddTapped: () -> Void
-    // ADDED: A closure for the share action.
     let onShareTapped: () -> Void
 
     var body: some View {
@@ -27,7 +26,6 @@ struct AllSpecialDaysCardView: View {
                 onAddTapped: {
                     onAddTapped()
                 },
-                // UPDATED: Pass the share action.
                 onShareTapped: {
                     onShareTapped()
                 },
@@ -35,7 +33,9 @@ struct AllSpecialDaysCardView: View {
                     navigationPath.append(NavigationDestinationType.editSpecialDay(IdentifiableCKRecordID(id: day.id)))
                 },
                 customTitle: "All Special Days",
-                customIcon: "🗓️"
+                customIcon: "🗓️",
+                // UPDATED: Explicitly hiding the share button for this card.
+                showShareButton: false
             )
         }
         .buttonStyle(PlainButtonStyle())

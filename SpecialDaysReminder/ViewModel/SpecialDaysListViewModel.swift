@@ -140,6 +140,8 @@ class SpecialDaysListViewModel: ObservableObject {
                 let privateCategoryRecords = try privateCategoryResults.map { try $0.1.get() }
                 var fetchedCategories = privateCategoryRecords.compactMap { SpecialDayCategory(record: $0, isShared: false) }
                 
+                fetchedCategories.sort { $0.sortOrder < $1.sortOrder }
+                
                 let privateDayQuery = CKQuery(recordType: CloudKitRecordType.specialDay.rawValue, predicate: NSPredicate(value: true))
                 let (privateDayResults, _) = try await CloudKitManager.shared.privateDatabase.records(matching: privateDayQuery)
                 let privateDayRecords = try privateDayResults.map { try $0.1.get() }
@@ -177,6 +179,9 @@ class SpecialDaysListViewModel: ObservableObject {
                     self.sortSpecialDays()
                     self.cloudKitState = .loaded
                     self.saveDataForWidget()
+                    
+                    // ADDED: Call to delete passed events after fetching.
+                    self.deletePassedOneTimeEvents()
                 }
             } catch {
                 await MainActor.run {
@@ -189,7 +194,11 @@ class SpecialDaysListViewModel: ObservableObject {
     // MARK: - Data Modification (CRUD Operations)
     
     func addCategory(_ category: SpecialDayCategory) {
-        CloudKitManager.shared.privateDatabase.save(category.record) { [weak self] (savedRecord, error) in
+        var newCategory = category
+        let newSortOrder = (categories.map { $0.sortOrder }.max() ?? -1) + 1
+        newCategory.sortOrder = newSortOrder
+        
+        CloudKitManager.shared.privateDatabase.save(newCategory.record) { [weak self] (savedRecord, error) in
             DispatchQueue.main.async {
                 guard let self = self else { return }
 
@@ -269,6 +278,16 @@ class SpecialDaysListViewModel: ObservableObject {
         }
         
         CloudKitManager.shared.privateDatabase.add(operation)
+    }
+    
+    func moveCategory(from source: IndexSet, to destination: Int) {
+        categories.move(fromOffsets: source, toOffset: destination)
+        
+        for i in 0..<categories.count {
+            categories[i].sortOrder = i
+        }
+        
+        updateCategories(categories)
     }
     
     func addSpecialDay(_ day: SpecialDayModel) {
@@ -356,6 +375,19 @@ class SpecialDaysListViewModel: ObservableObject {
         CloudKitManager.shared.privateDatabase.add(operation)
     }
     
+    // ADDED: Function to delete passed one-time events.
+    func deletePassedOneTimeEvents() {
+        guard UserDefaults.standard.bool(forKey: "autoDeletePassedEvents") else { return }
+        
+        let passedEvents = specialDays.filter {
+            $0.recurrence == .oneTime && $0.date < Date()
+        }
+        
+        for event in passedEvents {
+            deleteSpecialDay(id: event.id)
+        }
+    }
+    
     // MARK: - Helper & Utility Functions
     
     private func sortSpecialDays() {
@@ -403,7 +435,6 @@ class SpecialDaysListViewModel: ObservableObject {
         }
     }
     
-    // UPDATED: This function is now for generating a shareable URL
     func generateShareableURL(for day: SpecialDayModel) -> URL? {
         var components = URLComponents()
         components.scheme = "specialdaysreminder"
@@ -411,7 +442,6 @@ class SpecialDaysListViewModel: ObservableObject {
         
         let eventCategory = category(for: day)
         
-        // Use ISO8601 format for robust date parsing
         let dateFormatter = ISO8601DateFormatter()
         
         var queryItems = [
@@ -433,7 +463,6 @@ class SpecialDaysListViewModel: ObservableObject {
         return components.url
     }
     
-    // ADDED: New function to generate a shareable URL for a category
     func generateShareableURL(for category: SpecialDayCategory, completion: @escaping (URL?) -> Void) {
         let eventsForCategory = specialDays(for: category)
         let eventPayloads = eventsForCategory.map {
@@ -464,14 +493,12 @@ class SpecialDaysListViewModel: ObservableObject {
         }
     }
     
-    // ADDED: Function to trigger the sharing action for a category
     func shareCategory(category: SpecialDayCategory) {
         generateShareableURL(for: category) { url in
             guard let url = url else { return }
             
             let activityViewController = UIActivityViewController(activityItems: [url], applicationActivities: nil)
             
-            // Find the key window scene to present the share sheet
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let rootViewController = windowScene.windows.first?.rootViewController {
                 rootViewController.present(activityViewController, animated: true, completion: nil)

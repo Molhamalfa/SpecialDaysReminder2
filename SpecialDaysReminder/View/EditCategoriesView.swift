@@ -36,27 +36,32 @@ struct EditCategoriesView: View {
                 
                 Section(header: Text("Your Categories")) {
                     ForEach($viewModel.categories) { $category in
-                        HStack {
-                            EmojiTextField(text: $category.icon, placeholder: "⭐️")
-                                .font(.largeTitle)
-                                .frame(width: 50, height: 50)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(10)
-                            
-                            TextField("Category Name", text: $category.name)
-                                .font(.headline)
+                        // UPDATED: Wrapped the category's views in a VStack.
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                EmojiTextField(text: $category.icon, placeholder: "⭐️")
+                                    .font(.largeTitle)
+                                    .frame(width: 50, height: 50)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(10)
+                                
+                                TextField("Category Name", text: $category.name)
+                                    .font(.headline)
+                            }
+                            ColorPicker("Color", selection: $category.color, supportsOpacity: false)
                         }
-                        ColorPicker("Color", selection: $category.color, supportsOpacity: false)
+                        .padding(.vertical, 5) // Added some padding for better spacing
                     }
                     .onDelete(perform: { indexSet in
                         viewModel.deleteCategory(at: indexSet)
                     })
+                    .onMove(perform: { indices, newOffset in
+                        viewModel.moveCategory(from: indices, to: newOffset)
+                    })
                 }
                 
-                // Add a new section for debug settings that only appears in Debug builds.
                 #if DEBUG
                 Section(header: Text("Debug Settings")) {
-                    // This toggle binds directly to the debug property in the IAPManager.
                     Toggle("Simulate Premium Status", isOn: $iapManager.isDebugPremium)
                 }
                 #endif

@@ -29,6 +29,7 @@ enum NavigationDestinationType: Hashable {
     case editSpecialDay(IdentifiableCKRecordID)
     case calendarImport
     case editCategories
+    case settings
 }
 
 struct SpecialDaysListView: View {
@@ -50,7 +51,6 @@ struct SpecialDaysListView: View {
     
     @Binding var sharedEventInfo: SharedEventInfo?
     
-    // ADDED: Binding for the shared category info
     @Binding var sharedCategoryInfo: SharedCategoryInfo?
 
     @State private var allDaysCardOpacity: Double = 0
@@ -126,7 +126,6 @@ struct SpecialDaysListView: View {
                     .padding()
                 }
             }
-            // ADDED: Sheet to present the shared category
             .sheet(item: $sharedCategoryInfo) { info in
                 SharedCategoryView(viewModel: viewModel, sharedCategoryInfo: info, dismissAction: { sharedCategoryInfo = nil })
             }
@@ -215,6 +214,12 @@ struct SpecialDaysListView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
+                        navigationPath.append(NavigationDestinationType.settings)
+                    } label: {
+                        Label("Settings", systemImage: "gear")
+                    }
+                    
+                    Button {
                         navigationPath.append(NavigationDestinationType.editCategories)
                     } label: {
                         Label("Edit Categories", systemImage: "pencil")
@@ -250,6 +255,9 @@ struct SpecialDaysListView: View {
             CalendarImportView(specialDaysListViewModel: viewModel)
         case .editCategories:
             EditCategoriesView(specialDaysListViewModel: viewModel)
+        case .settings:
+            // UPDATED: Pass the view model to the SettingsView.
+            SettingsView(specialDaysListViewModel: viewModel)
         }
     }
     
@@ -273,7 +281,6 @@ struct SpecialDaysListView: View {
     }
 }
 
-// ADDED: A new view to display the shared category information
 struct SharedCategoryView: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
     let sharedCategoryInfo: SharedCategoryInfo

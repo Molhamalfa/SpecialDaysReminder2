@@ -12,15 +12,17 @@ struct CategoryCardView: View {
     let specialDays: [SpecialDayModel]
     
     let onAddTapped: () -> Void
-    // ADDED: A closure for the new share action.
     let onShareTapped: () -> Void
     let onDayTapped: (SpecialDayModel) -> Void
 
     var customTitle: String?
     var customIcon: String?
     
-    // UPDATED: The initializer now accepts an onShareTapped closure.
-    init(category: SpecialDayCategory, specialDays: [SpecialDayModel], onAddTapped: @escaping () -> Void, onShareTapped: @escaping () -> Void, onDayTapped: @escaping (SpecialDayModel) -> Void, customTitle: String? = nil, customIcon: String? = nil) {
+    // ADDED: A property to control the visibility of the share button.
+    let showShareButton: Bool
+    
+    // UPDATED: The initializer now accepts a boolean to show/hide the share button.
+    init(category: SpecialDayCategory, specialDays: [SpecialDayModel], onAddTapped: @escaping () -> Void, onShareTapped: @escaping () -> Void, onDayTapped: @escaping (SpecialDayModel) -> Void, customTitle: String? = nil, customIcon: String? = nil, showShareButton: Bool = true) {
         self.category = category
         self.specialDays = specialDays
         self.onAddTapped = onAddTapped
@@ -28,6 +30,7 @@ struct CategoryCardView: View {
         self.onDayTapped = onDayTapped
         self.customTitle = customTitle
         self.customIcon = customIcon
+        self.showShareButton = showShareButton
     }
 
     var body: some View {
@@ -49,14 +52,16 @@ struct CategoryCardView: View {
 
                 Spacer()
                 
-                // ADDED: The share button for the category.
-                Button(action: onShareTapped) {
-                    Image(systemName: "square.and.arrow.up.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.white)
-                        .padding(5)
-                        .background(Color.white.opacity(0.2))
-                        .clipShape(Circle())
+                // UPDATED: The share button is now conditional.
+                if showShareButton {
+                    Button(action: onShareTapped) {
+                        Image(systemName: "square.and.arrow.up.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding(5)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(Circle())
+                    }
                 }
                 
                 Button(action: onAddTapped) {

@@ -61,6 +61,12 @@ public struct SpecialDayCategory: Identifiable, Hashable, Sendable {
         get { record["icon"] as? String ?? "⭐️" }
         set { record["icon"] = newValue }
     }
+    
+    // ADDED: A property to store the custom sort order.
+    public var sortOrder: Int {
+        get { record["sortOrder"] as? Int ?? 0 }
+        set { record["sortOrder"] = newValue }
+    }
 
     public var color: Color {
         get { Color(hex: colorHex) ?? .purple }
@@ -79,7 +85,6 @@ public struct SpecialDayCategory: Identifiable, Hashable, Sendable {
         self.icon = icon
     }
     
-    // ADD THIS NEW INITIALIZER
     init(recordID: CKRecord.ID, name: String, color: Color, icon: String, isShared: Bool) {
         self.record = CKRecord(recordType: "Category", recordID: recordID)
         self.isShared = isShared
