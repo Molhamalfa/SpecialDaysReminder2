@@ -51,6 +51,13 @@ struct SharedEventPayload: Codable {
     let name: String
     let date: Date
     let forWhom: String
+    // ADDED: New properties for sharing more event details.
+    let isAllDay: Bool
+    let recurrence: String
+    let reminderEnabled: Bool
+    let reminderDaysBefore: Int
+    let reminderFrequency: Int
+    let reminderTimes: [Date]
 }
 
 
@@ -180,7 +187,6 @@ class SpecialDaysListViewModel: ObservableObject {
                     self.cloudKitState = .loaded
                     self.saveDataForWidget()
                     
-                    // ADDED: Call to delete passed events after fetching.
                     self.deletePassedOneTimeEvents()
                 }
             } catch {
@@ -375,7 +381,6 @@ class SpecialDaysListViewModel: ObservableObject {
         CloudKitManager.shared.privateDatabase.add(operation)
     }
     
-    // ADDED: Function to delete passed one-time events.
     func deletePassedOneTimeEvents() {
         guard UserDefaults.standard.bool(forKey: "autoDeletePassedEvents") else { return }
         
@@ -435,6 +440,7 @@ class SpecialDaysListViewModel: ObservableObject {
         }
     }
     
+    // UPDATED: This function now includes all event details in the shareable URL.
     func generateShareableURL(for day: SpecialDayModel) -> URL? {
         var components = URLComponents()
         components.scheme = "specialdaysreminder"
@@ -447,8 +453,18 @@ class SpecialDaysListViewModel: ObservableObject {
         var queryItems = [
             URLQueryItem(name: "name", value: day.name),
             URLQueryItem(name: "date", value: dateFormatter.string(from: day.date)),
-            URLQueryItem(name: "forWhom", value: day.forWhom)
+            URLQueryItem(name: "forWhom", value: day.forWhom),
+            URLQueryItem(name: "isAllDay", value: String(day.isAllDay)),
+            URLQueryItem(name: "recurrence", value: day.recurrence.rawValue),
+            URLQueryItem(name: "reminderEnabled", value: String(day.reminderEnabled)),
+            URLQueryItem(name: "reminderDaysBefore", value: String(day.reminderDaysBefore)),
+            URLQueryItem(name: "reminderFrequency", value: String(day.reminderFrequency))
         ]
+        
+        let reminderTimestamps = day.reminderTimes.map { String($0.timeIntervalSince1970) }
+        if !reminderTimestamps.isEmpty {
+            queryItems.append(URLQueryItem(name: "reminderTimes", value: reminderTimestamps.joined(separator: ",")))
+        }
         
         if let icon = eventCategory?.icon {
             queryItems.append(URLQueryItem(name: "icon", value: icon))
@@ -466,7 +482,17 @@ class SpecialDaysListViewModel: ObservableObject {
     func generateShareableURL(for category: SpecialDayCategory, completion: @escaping (URL?) -> Void) {
         let eventsForCategory = specialDays(for: category)
         let eventPayloads = eventsForCategory.map {
-            SharedEventPayload(name: $0.name, date: $0.date, forWhom: $0.forWhom)
+            SharedEventPayload(
+                name: $0.name,
+                date: $0.date,
+                forWhom: $0.forWhom,
+                isAllDay: $0.isAllDay,
+                recurrence: $0.recurrence.rawValue,
+                reminderEnabled: $0.reminderEnabled,
+                reminderDaysBefore: $0.reminderDaysBefore,
+                reminderFrequency: $0.reminderFrequency,
+                reminderTimes: $0.reminderTimes
+            )
         }
         
         let payload = SharedCategoryPayload(

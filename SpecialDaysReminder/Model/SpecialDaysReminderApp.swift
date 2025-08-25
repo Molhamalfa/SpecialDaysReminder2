@@ -28,7 +28,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
-// ADDED: Structs for handling shared category data
 struct SharedCategoryInfo: Identifiable {
     let id = UUID()
     let name: String
@@ -42,6 +41,12 @@ struct SharedEvent: Identifiable {
     let name: String
     let date: Date
     let forWhom: String
+    let isAllDay: Bool
+    let recurrence: RecurrenceType
+    let reminderEnabled: Bool
+    let reminderDaysBefore: Int
+    let reminderFrequency: Int
+    let reminderTimes: [Date]
 }
 
 @main
@@ -53,7 +58,6 @@ struct SpecialDaysReminderApp: App {
     
     @State private var sharedEventInfo: SharedEventInfo? = nil
     
-    // ADDED: State to hold incoming shared category info
     @State private var sharedCategoryInfo: SharedCategoryInfo? = nil
 
     @StateObject private var storeManager: StoreManager
@@ -76,7 +80,7 @@ struct SpecialDaysReminderApp: App {
                 deepLinkEventID: $deepLinkEventID,
                 deepLinkAddEvent: $deepLinkAddEvent,
                 sharedEventInfo: $sharedEventInfo,
-                sharedCategoryInfo: $sharedCategoryInfo // Pass the new binding
+                sharedCategoryInfo: $sharedCategoryInfo
             )
             .environmentObject(storeManager)
             .environmentObject(iapManager)
@@ -89,7 +93,6 @@ struct SpecialDaysReminderApp: App {
     private func handleIncomingURL(_ url: URL) {
         guard url.scheme == "specialdaysreminder" else { return }
 
-        // Reset deep links
         self.deepLinkEventID = nil
         self.deepLinkAddEvent = false
         self.sharedEventInfo = nil
@@ -108,18 +111,38 @@ struct SpecialDaysReminderApp: App {
             let icon = queryItems.first(where: { $0.name == "icon" })?.value
             let colorHex = queryItems.first(where: { $0.name == "colorHex" })?.value
             
+            let isAllDay = Bool(queryItems.first(where: { $0.name == "isAllDay" })?.value ?? "true") ?? true
+            let recurrenceRaw = queryItems.first(where: { $0.name == "recurrence" })?.value ?? RecurrenceType.yearly.rawValue
+            let recurrence = RecurrenceType(rawValue: recurrenceRaw) ?? .yearly
+            let reminderEnabled = Bool(queryItems.first(where: { $0.name == "reminderEnabled" })?.value ?? "false") ?? false
+            let reminderDaysBefore = Int(queryItems.first(where: { $0.name == "reminderDaysBefore" })?.value ?? "1") ?? 1
+            let reminderFrequency = Int(queryItems.first(where: { $0.name == "reminderFrequency" })?.value ?? "1") ?? 1
+            
+            let reminderTimesString = queryItems.first(where: { $0.name == "reminderTimes" })?.value ?? ""
+            let reminderTimestamps = reminderTimesString.split(separator: ",").compactMap { Double($0) }
+            let reminderTimes = reminderTimestamps.map { Date(timeIntervalSince1970: $0) }
+            
             let dateFormatter = ISO8601DateFormatter()
             let date = dateFormatter.date(from: dateString) ?? Date()
             
-            self.sharedEventInfo = SharedEventInfo(name: name, date: date, forWhom: forWhom, icon: icon, colorHex: colorHex)
+            self.sharedEventInfo = SharedEventInfo(name: name, date: date, forWhom: forWhom, icon: icon, colorHex: colorHex, isAllDay: isAllDay, recurrence: recurrence, reminderEnabled: reminderEnabled, reminderDaysBefore: reminderDaysBefore, reminderFrequency: reminderFrequency, reminderTimes: reminderTimes)
         } else if url.host == "shareCategory", let queryItems = components.queryItems {
-            // ADDED: Handle the new category sharing URL
             if let dataString = queryItems.first(where: { $0.name == "data" })?.value,
                let data = dataString.data(using: .utf8) {
                 do {
                     let payload = try JSONDecoder().decode(SharedCategoryPayload.self, from: data)
                     let sharedEvents = payload.events.map {
-                        SharedEvent(name: $0.name, date: $0.date, forWhom: $0.forWhom)
+                        SharedEvent(
+                            name: $0.name,
+                            date: $0.date,
+                            forWhom: $0.forWhom,
+                            isAllDay: $0.isAllDay,
+                            recurrence: RecurrenceType(rawValue: $0.recurrence) ?? .yearly,
+                            reminderEnabled: $0.reminderEnabled,
+                            reminderDaysBefore: $0.reminderDaysBefore,
+                            reminderFrequency: $0.reminderFrequency,
+                            reminderTimes: $0.reminderTimes
+                        )
                     }
                     self.sharedCategoryInfo = SharedCategoryInfo(
                         name: payload.name,

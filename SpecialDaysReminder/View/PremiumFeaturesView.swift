@@ -51,28 +51,26 @@ struct PremiumFeaturesView: View {
             .padding()
 
             VStack (spacing: 20) {
-                Image("purchaseview-hero")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
+                // UPDATED: Replaced the image with a styled system icon.
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 80, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.purple, .pink],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(height: 150, alignment: .center)
                     .scaleEffect(shakeZoom)
                     .rotationEffect(.degrees(shakeDegrees))
                     .onAppear(perform: startShaking)
                 
-                VStack (spacing: 10) {
-                    Text("Unlock Premium Access")
-                        .font(.system(size: 30, weight: .semibold))
-                        .multilineTextAlignment(.center)
-                    VStack (alignment: .leading) {
-                        PurchaseFeatureView(title: "Unlimited Categories", icon: "infinity.circle.fill", color: .purple)
-                        PurchaseFeatureView(title: "Unlimited Events", icon: "calendar.badge.plus", color: .purple)
-                        PurchaseFeatureView(title: "Home Screen Widgets", icon: "square.stack.3d.up.fill", color: .purple)
-                    }
-                    .font(.system(size: 19))
-                    .padding(.top)
-                }
+                Text("Unlock Premium Access")
+                    .font(.system(size: 30, weight: .semibold))
+                    .multilineTextAlignment(.center)
                 
-                Spacer()
+                FeatureComparisonView()
                 
                 VStack (spacing: 10) {
                     if storeManager.products.isEmpty {
@@ -144,20 +142,68 @@ struct PremiumFeaturesView: View {
 
 // MARK: - Subviews
 
-private struct PurchaseFeatureView: View {
-    let title: String
-    let icon: String
-    let color: Color
+private struct FeatureComparisonView: View {
+    var body: some View {
+        VStack {
+            HStack {
+                Text("Feature").bold()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer()
+                Text("Free").bold()
+                    .frame(width: 80)
+                Text("Premium").bold()
+                    .foregroundColor(.purple)
+                    .frame(width: 80)
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
+            
+            Divider()
+            
+            FeatureComparisonRow(featureName: "Categories", freeLimit: "1", premiumBenefit: "Unlimited")
+            Divider()
+            FeatureComparisonRow(featureName: "Events", freeLimit: "5", premiumBenefit: "Unlimited")
+            Divider()
+            FeatureComparisonRow(featureName: "Widgets", freeLimit: "No", premiumBenefit: "Yes")
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+    }
+}
+
+private struct FeatureComparisonRow: View {
+    let featureName: String
+    let freeLimit: String
+    let premiumBenefit: String
     
     var body: some View {
         HStack {
-            Image(systemName: icon)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 27, height: 27, alignment: .center)
-                .foregroundColor(color)
-            Text(title)
+            Text(featureName)
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer()
+            Text(freeLimit)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(width: 80)
+            
+            if premiumBenefit == "Yes" {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.purple)
+                    .frame(width: 80)
+            } else if premiumBenefit == "No" {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.secondary)
+                    .frame(width: 80)
+            } else {
+                Text(premiumBenefit)
+                    .font(.subheadline.bold())
+                    .foregroundColor(.purple)
+                    .frame(width: 80)
+            }
         }
+        .padding(.vertical, 8)
     }
 }
 
@@ -171,7 +217,6 @@ private struct SubscriptionOptionButton: View {
     
     var body: some View {
         Button(action: {
-            // ADDED: Play a light impact haptic on selection.
             HapticManager.shared.playLightImpact()
             withAnimation {
                 selectedProductId = product.id
@@ -240,7 +285,6 @@ private struct PurchaseButton: View {
 
     var body: some View {
         Button(action: {
-            // ADDED: Play a light impact haptic on purchase attempt.
             HapticManager.shared.playLightImpact()
             Task {
                 isPurchasing = true
@@ -276,7 +320,6 @@ private struct RestoreButton: View {
 
     var body: some View {
         Button("Restore Purchases") {
-            // ADDED: Play a light impact haptic on restore.
             HapticManager.shared.playLightImpact()
             Task {
                 await storeManager.restorePurchases()

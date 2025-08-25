@@ -21,6 +21,12 @@ struct SharedEventInfo: Identifiable {
     let forWhom: String
     let icon: String?
     let colorHex: String?
+    let isAllDay: Bool
+    let recurrence: RecurrenceType
+    let reminderEnabled: Bool
+    let reminderDaysBefore: Int
+    let reminderFrequency: Int
+    let reminderTimes: [Date]
 }
 
 enum NavigationDestinationType: Hashable {
@@ -83,51 +89,10 @@ struct SpecialDaysListView: View {
                 categoryGridOffset: $categoryGridOffset
             )
             .sheet(item: $sharedEventInfo) { info in
-                VStack {
-                    Text("Add Shared Event?")
-                        .font(.largeTitle)
-                        .padding()
-                    
-                    if let icon = info.icon {
-                        Text(icon)
-                            .font(.system(size: 80))
-                    }
-                    
-                    Text(info.name)
-                        .font(.title)
-                    Text("For: \(info.forWhom)")
-                        .font(.headline)
-                    Text(info.date, style: .date)
-                        .font(.subheadline)
-                    
-                    Spacer()
-                    
-                    HStack {
-                        Button("Cancel") {
-                            sharedEventInfo = nil
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray5))
-                        .foregroundColor(.primary)
-                        .cornerRadius(10)
-                        
-                        Button("Add") {
-                            let newDay = SpecialDayModel(name: info.name, date: info.date, forWhom: info.forWhom, category: nil)
-                            viewModel.addSpecialDay(newDay)
-                            sharedEventInfo = nil
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                    }
-                    .padding()
-                }
+                AddSharedEventView(viewModel: viewModel, info: info, showingPremiumSheet: $showingPremiumSheet, sharedEventInfo: $sharedEventInfo)
             }
             .sheet(item: $sharedCategoryInfo) { info in
-                SharedCategoryView(viewModel: viewModel, sharedCategoryInfo: info, dismissAction: { sharedCategoryInfo = nil })
+                SharedCategoryView(viewModel: viewModel, sharedCategoryInfo: info, showingPremiumSheet: $showingPremiumSheet, dismissAction: { sharedCategoryInfo = nil })
             }
     }
     
@@ -205,7 +170,6 @@ struct SpecialDaysListView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if case .loaded = viewModel.cloudKitState {
-            // ADDED: ToolbarItem for premium status/button.
             ToolbarItem(placement: .navigationBarLeading) {
                 if viewModel.isPremiumUser {
                     HStack {
@@ -216,6 +180,7 @@ struct SpecialDaysListView: View {
                     .foregroundColor(.purple)
                 } else {
                     Button(action: {
+                        HapticManager.shared.playLightImpact()
                         showingPremiumSheet = true
                     }) {
                         Image(systemName: "crown.fill")
@@ -304,6 +269,7 @@ struct SpecialDaysListView: View {
 struct SharedCategoryView: View {
     @ObservedObject var viewModel: SpecialDaysListViewModel
     let sharedCategoryInfo: SharedCategoryInfo
+    @Binding var showingPremiumSheet: Bool
     let dismissAction: () -> Void
     
     var body: some View {
@@ -337,24 +303,42 @@ struct SharedCategoryView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") {
-                        let newCategory = SpecialDayCategory(
-                            name: sharedCategoryInfo.name,
-                            color: Color(hex: sharedCategoryInfo.colorHex) ?? .purple,
-                            icon: sharedCategoryInfo.icon
-                        )
-                        viewModel.addCategory(newCategory)
+                        let categoryLimit = 1
+                        let eventLimit = 5
                         
-                        for event in sharedCategoryInfo.events {
-                            let newDay = SpecialDayModel(
-                                name: event.name,
-                                date: event.date,
-                                forWhom: event.forWhom,
-                                category: newCategory
+                        let willExceedCategoryLimit = viewModel.categories.count + 1 > categoryLimit
+                        let willExceedEventLimit = viewModel.specialDays.count + sharedCategoryInfo.events.count > eventLimit
+                        
+                        if !viewModel.isPremiumUser && (willExceedCategoryLimit || willExceedEventLimit) {
+                            showingPremiumSheet = true
+                            dismissAction()
+                        } else {
+                            let newCategory = SpecialDayCategory(
+                                name: sharedCategoryInfo.name,
+                                color: Color(hex: sharedCategoryInfo.colorHex) ?? .purple,
+                                icon: sharedCategoryInfo.icon
                             )
-                            viewModel.addSpecialDay(newDay)
+                            viewModel.addCategory(newCategory)
+                            
+                            for event in sharedCategoryInfo.events {
+                                // UPDATED: The new event is now created with all the shared details.
+                                let newDay = SpecialDayModel(
+                                    name: event.name,
+                                    date: event.date,
+                                    forWhom: event.forWhom,
+                                    category: newCategory,
+                                    recurrence: event.recurrence,
+                                    isAllDay: event.isAllDay,
+                                    reminderEnabled: event.reminderEnabled,
+                                    reminderDaysBefore: event.reminderDaysBefore,
+                                    reminderFrequency: event.reminderFrequency,
+                                    reminderTimes: event.reminderTimes
+                                )
+                                viewModel.addSpecialDay(newDay)
+                            }
+                            
+                            dismissAction()
                         }
-                        
-                        dismissAction()
                     }
                 }
             }
