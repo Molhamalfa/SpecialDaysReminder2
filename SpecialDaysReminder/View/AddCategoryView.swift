@@ -43,6 +43,9 @@ struct AddCategoryView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
+                        // ADDED: Play success haptic on save.
+                        HapticManager.shared.playSuccess()
+                        
                         if !viewModel.isPremiumUser && viewModel.categories.count >= 1 {
                             showingPremiumSheet = true
                             dismiss()

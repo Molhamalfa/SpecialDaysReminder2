@@ -68,12 +68,13 @@ struct CategoryDetailView: View {
                 .listRowSeparator(.hidden)
                 .swipeActions {
                     Button(role: .destructive) {
+                        // ADDED: Play success haptic on delete.
+                        HapticManager.shared.playSuccess()
                         categoryDetailViewModel.deleteDay(id: day.id)
                     } label: {
                         Label("Delete", systemImage: "trash.fill")
                     }
                     
-                    // UPDATED: Use ShareLink with a custom preview including the app icon
                     if let url = specialDaysListViewModel.generateShareableURL(for: day) {
                         ShareLink(
                             item: url,

@@ -36,7 +36,6 @@ struct EditCategoriesView: View {
                 
                 Section(header: Text("Your Categories")) {
                     ForEach($viewModel.categories) { $category in
-                        // UPDATED: Wrapped the category's views in a VStack.
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 EmojiTextField(text: $category.icon, placeholder: "⭐️")
@@ -50,9 +49,11 @@ struct EditCategoriesView: View {
                             }
                             ColorPicker("Color", selection: $category.color, supportsOpacity: false)
                         }
-                        .padding(.vertical, 5) // Added some padding for better spacing
+                        .padding(.vertical, 5)
                     }
                     .onDelete(perform: { indexSet in
+                        // ADDED: Play success haptic on delete.
+                        HapticManager.shared.playSuccess()
                         viewModel.deleteCategory(at: indexSet)
                     })
                     .onMove(perform: { indices, newOffset in

@@ -8,7 +8,6 @@
 import SwiftUI
 import StoreKit
 
-// ADDED: An extension to format the subscription period
 extension Product.SubscriptionPeriod {
     var localizedDescription: String {
         let unitString: String
@@ -172,6 +171,8 @@ private struct SubscriptionOptionButton: View {
     
     var body: some View {
         Button(action: {
+            // ADDED: Play a light impact haptic on selection.
+            HapticManager.shared.playLightImpact()
             withAnimation {
                 selectedProductId = product.id
             }
@@ -181,7 +182,6 @@ private struct SubscriptionOptionButton: View {
                     Text(product.displayName)
                         .font(.headline.bold())
                     
-                    // UPDATED: Use a ViewBuilder to create the price display
                     priceDescriptionView
                         .font(.caption)
                         .opacity(0.8)
@@ -203,7 +203,6 @@ private struct SubscriptionOptionButton: View {
         .accentColor(.primary)
     }
     
-    // UPDATED: This is now a ViewBuilder property
     @ViewBuilder
     private var priceDescriptionView: some View {
         if let subscription = product.subscription,
@@ -241,6 +240,8 @@ private struct PurchaseButton: View {
 
     var body: some View {
         Button(action: {
+            // ADDED: Play a light impact haptic on purchase attempt.
+            HapticManager.shared.playLightImpact()
             Task {
                 isPurchasing = true
                 _ = try? await storeManager.purchase(product)
@@ -275,6 +276,8 @@ private struct RestoreButton: View {
 
     var body: some View {
         Button("Restore Purchases") {
+            // ADDED: Play a light impact haptic on restore.
+            HapticManager.shared.playLightImpact()
             Task {
                 await storeManager.restorePurchases()
             }

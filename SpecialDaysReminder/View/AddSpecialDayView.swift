@@ -137,6 +137,9 @@ struct AddSpecialDayView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
+                        // ADDED: Play success haptic on save.
+                        HapticManager.shared.playSuccess()
+                        
                         if !viewModel.isPremiumUser && viewModel.specialDays.count >= 5 {
                             showingPremiumSheet = true
                             dismiss()
@@ -176,6 +179,3 @@ struct AddSpecialDayView: View {
         }
     }
 }
-
-// REMOVED: The private helper structs (AddEventDetailsSection and AddReminderSettingsSection)
-// are no longer needed as their content has been moved into the main body.
